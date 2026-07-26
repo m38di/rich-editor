@@ -1,0 +1,1215 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ════════════════════════════════════════════════════════════════
+   Telegram iOS design system
+   SF typography · translucent vibrancy bars · grouped sheets ·
+   spring motion · hairline separators
+   ════════════════════════════════════════════════════════════════ */
+
+:root {
+  --blue: #007aff;
+  --blue-deep: #0064d2;
+  --grouped: #f2f2f7;
+  --label: #000;
+  --secondary: rgba(60, 60, 67, 0.6);
+  --tertiary: rgba(60, 60, 67, 0.33);
+  --sep: rgba(60, 60, 67, 0.14);
+  --fill: rgba(120, 120, 128, 0.12);
+  --fill2: rgba(120, 120, 128, 0.18);
+  --bar: rgba(249, 249, 249, 0.86);
+  --green: #34c759;
+  --red: #ff3b30;
+  --orange: #ff9500;
+  --purple: #af52de;
+  --teal: #5ac8fa;
+  --indigo: #5856d6;
+  --pink: #ff2d55;
+  --spring: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue',
+    'Segoe UI', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  background: var(--grouped);
+  color: var(--label);
+  overscroll-behavior: none;
+}
+
+::selection {
+  background: rgba(0, 122, 255, 0.25);
+}
+
+/* iOS-style overlay scrollbars */
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ── app shell: content scrolls beneath translucent bars ───────── */
+
+.app-shell {
+  position: relative;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(900px 380px at 100% -8%, rgba(0, 122, 255, 0.055), transparent 60%),
+    radial-gradient(700px 320px at -8% 108%, rgba(90, 200, 250, 0.06), transparent 55%),
+    #fff;
+}
+
+.ios-vibrancy {
+  background: var(--bar);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+}
+
+.ios-nav {
+  position: absolute;
+  inset: 0 0 auto 0;
+  z-index: 30;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
+  border-bottom: 0.5px solid var(--sep);
+}
+
+.ios-nav-title {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.4px;
+}
+
+.ios-nav-sub {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--secondary);
+  letter-spacing: 0;
+}
+
+.main-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 64px 0 96px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ios-toolbar {
+  position: absolute;
+  inset: auto 0 0 0;
+  z-index: 30;
+  border-top: 0.5px solid var(--sep);
+  padding: 6px 10px calc(8px + env(safe-area-inset-bottom));
+}
+
+/* ── buttons ────────────────────────────────────────────────────── */
+
+.ios-icon-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--blue);
+  transition: transform 0.14s var(--spring), opacity 0.14s ease, background 0.14s ease;
+  flex: 0 0 auto;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+.ios-icon-btn:active {
+  transform: scale(0.86);
+  opacity: 0.55;
+}
+.ios-icon-btn:disabled {
+  opacity: 0.28;
+  transform: none;
+}
+.ios-icon-btn.muted {
+  color: var(--label);
+}
+
+.press {
+  transition: transform 0.16s var(--spring), opacity 0.16s ease, background 0.16s ease;
+}
+.press:active {
+  transform: scale(0.955);
+  opacity: 0.75;
+}
+
+/* compose bar buttons */
+.tool-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--blue);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: transform 0.15s var(--spring), background 0.15s ease, opacity 0.15s ease;
+  flex: 0 0 auto;
+}
+.tool-btn:active {
+  transform: scale(0.85);
+  background: var(--fill);
+}
+.tool-btn.on {
+  background: rgba(0, 122, 255, 0.12);
+}
+
+.attach-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1.6px solid var(--tertiary);
+  color: var(--secondary);
+  display: grid;
+  place-items: center;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.15s var(--spring);
+}
+.attach-btn:active {
+  transform: scale(0.85);
+  border-color: var(--blue);
+  color: var(--blue);
+}
+
+.send-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--blue);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgba(0, 122, 255, 0.42);
+  transition: transform 0.18s var(--spring), background 0.18s ease, box-shadow 0.18s ease;
+  flex: 0 0 auto;
+}
+.send-btn:hover {
+  background: var(--blue-deep);
+}
+.send-btn:active {
+  transform: scale(0.84);
+  box-shadow: 0 1px 4px rgba(0, 122, 255, 0.35);
+}
+
+/* ── formatting strip (appears on selection) ───────────────────── */
+
+.ios-format {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  padding: 4px 5px;
+  border-radius: 12px;
+  max-width: min(96vw, 640px);
+  overflow-x: auto;
+  scrollbar-width: none;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.16), 0 0 0 0.5px rgba(0, 0, 0, 0.05);
+}
+.ios-format::-webkit-scrollbar {
+  display: none;
+}
+
+.fmt-btn {
+  min-width: 38px;
+  height: 38px;
+  padding: 0 7px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  font-size: 15px;
+  color: var(--label);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  flex: 0 0 auto;
+  transition: transform 0.13s var(--spring), background 0.13s ease, color 0.13s ease;
+}
+.fmt-btn:active {
+  transform: scale(0.88);
+}
+.fmt-btn.on {
+  background: rgba(0, 122, 255, 0.14);
+  color: var(--blue);
+}
+.fmt-btn:disabled {
+  opacity: 0.25;
+}
+.fmt-sep {
+  width: 1px;
+  height: 22px;
+  background: var(--sep);
+  margin: 0 4px;
+  flex: 0 0 auto;
+}
+
+/* ── iOS sheets (menus, dialogs, attach) ───────────────────────── */
+
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(0, 0, 0, 0.38);
+  animation: iosFade 0.28s ease-out both;
+  pointer-events: auto;
+}
+
+.ios-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 41;
+  pointer-events: auto;
+  background: var(--grouped);
+  border-radius: 13px 13px 0 0;
+  box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.18);
+  padding: 0 8px calc(10px + env(safe-area-inset-bottom));
+  max-height: 82vh;
+  display: flex;
+  flex-direction: column;
+  animation: iosSheetUp 0.46s var(--spring) both;
+}
+@media (min-width: 640px) {
+  .ios-sheet {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    width: 420px;
+    animation: iosSheetUpCenter 0.46s var(--spring) both;
+  }
+}
+
+.grabber {
+  width: 36px;
+  height: 5px;
+  border-radius: 2.5px;
+  background: rgba(60, 60, 67, 0.3);
+  margin: 7px auto 6px;
+  flex: 0 0 auto;
+}
+
+.sheet-scroll {
+  overflow-y: auto;
+  min-height: 0;
+  padding-bottom: 6px;
+}
+
+.sheet-header {
+  display: flex;
+  align-items: center;
+  padding: 4px 8px 10px;
+  flex: 0 0 auto;
+}
+.sheet-title {
+  flex: 1;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+}
+.sheet-action {
+  min-width: 60px;
+  font-size: 17px;
+  font-weight: 400;
+  color: var(--blue);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px 4px;
+  transition: opacity 0.13s ease;
+}
+.sheet-action:active {
+  opacity: 0.4;
+}
+.sheet-action.bold {
+  font-weight: 600;
+}
+.sheet-action:disabled {
+  opacity: 0.3;
+}
+
+/* action rows (Telegram-style menu cards) */
+.sheet-card {
+  background: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 0 0 8px;
+}
+
+.sheet-row {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  width: 100%;
+  min-height: 46px;
+  padding: 8px 14px;
+  background: #fff;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-size: 16.5px;
+  color: var(--label);
+  transition: background 0.13s ease;
+  position: relative;
+}
+.sheet-row:active {
+  background: var(--fill);
+}
+.sheet-row + .sheet-row::before {
+  content: '';
+  position: absolute;
+  left: 56px;
+  right: 0;
+  top: 0;
+  height: 0.5px;
+  background: var(--sep);
+}
+.sheet-row .row-label {
+  flex: 1;
+  min-width: 0;
+  letter-spacing: -0.2px;
+}
+.sheet-row .row-sub {
+  font-size: 13px;
+  color: var(--secondary);
+}
+.sheet-row .check {
+  color: var(--blue);
+  flex: 0 0 auto;
+}
+.sheet-row:disabled {
+  opacity: 0.35;
+}
+
+.row-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  flex: 0 0 auto;
+}
+
+/* grouped form (iOS settings style) */
+.ios-form {
+  background: #fff;
+  border-radius: 10px;
+  margin: 0 0 8px;
+  overflow: hidden;
+}
+.form-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 6px 14px;
+  position: relative;
+}
+.form-row + .form-row::before {
+  content: '';
+  position: absolute;
+  left: 14px;
+  right: 0;
+  top: 0;
+  height: 0.5px;
+  background: var(--sep);
+}
+.form-label {
+  font-size: 16px;
+  color: var(--label);
+  flex: 0 0 auto;
+  letter-spacing: -0.2px;
+}
+.form-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  font-size: 16px;
+  color: var(--label);
+  text-align: right;
+}
+.form-input::placeholder {
+  color: var(--tertiary);
+}
+.form-input.left {
+  text-align: left;
+}
+textarea.form-input {
+  text-align: left;
+  resize: none;
+  padding: 8px 0;
+  line-height: 1.45;
+}
+.form-hint {
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--secondary);
+  padding: 2px 16px 10px;
+}
+
+/* segmented control */
+.ios-seg {
+  display: inline-flex;
+  background: var(--fill);
+  border-radius: 8px;
+  padding: 2px;
+  gap: 0;
+}
+.ios-seg button {
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--label);
+  padding: 5px 14px;
+  border-radius: 6.5px;
+  cursor: pointer;
+  letter-spacing: -0.1px;
+  transition: color 0.15s ease;
+  white-space: nowrap;
+}
+.ios-seg button.on {
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12), 0 0 0 0.5px rgba(0, 0, 0, 0.04);
+}
+
+/* ── full-screen sheet (preview) ───────────────────────────────── */
+
+.full-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: var(--grouped);
+  display: flex;
+  flex-direction: column;
+  animation: iosSheetUp 0.46s var(--spring) both;
+}
+
+/* ── toast banner (iOS notification style) ─────────────────────── */
+
+.ios-banner {
+  position: fixed;
+  top: calc(12px + env(safe-area-inset-top));
+  left: 50%;
+  z-index: 70;
+  transform: translateX(-50%);
+  background: rgba(28, 28, 30, 0.88);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: -0.1px;
+  padding: 10px 18px;
+  border-radius: 22px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
+  animation: iosBannerDown 0.42s var(--spring) both;
+  max-width: 88vw;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   Editor content — Telegram iOS article typography
+   ════════════════════════════════════════════════════════════════ */
+
+.ProseMirror {
+  outline: none;
+}
+
+.rich-editor {
+  max-width: 720px;
+  margin: 0 auto;
+  min-height: 52vh;
+  padding: 18px 20px 60px;
+  font-size: 17px;
+  line-height: 1.52;
+  color: var(--label);
+  caret-color: var(--blue);
+  letter-spacing: -0.15px;
+}
+
+.ProseMirror-selectednode {
+  outline: 2px solid rgba(0, 122, 255, 0.55);
+  outline-offset: 2px;
+  border-radius: 10px;
+}
+li.ProseMirror-selectednode {
+  outline: none;
+}
+
+/* headings — SF Pro Display weights */
+.rich-editor h1,
+.rich-editor h2,
+.rich-editor h3,
+.rich-editor h4,
+.rich-editor h5,
+.rich-editor h6 {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue',
+    'Segoe UI', system-ui, sans-serif;
+  font-weight: 700;
+  line-height: 1.22;
+  letter-spacing: -0.5px;
+  margin: 0.85em 0 0.3em;
+}
+.rich-editor h1 { font-size: 28px; }
+.rich-editor h2 { font-size: 24px; }
+.rich-editor h3 { font-size: 21px; }
+.rich-editor h4 { font-size: 18.5px; }
+.rich-editor h5 { font-size: 17px; }
+.rich-editor h6 { font-size: 15px; color: var(--secondary); text-transform: uppercase; letter-spacing: 0.4px; }
+.rich-editor h1:first-child { margin-top: 0.1em; }
+
+.rich-editor p {
+  margin: 0.42em 0;
+}
+
+.rich-editor a {
+  color: var(--blue);
+  text-decoration: none;
+}
+
+/* quote — Telegram iOS: accent bar + tinted bubble + author */
+.re-quote {
+  margin: 0.75em 0;
+  padding: 9px 14px 9px 13px;
+  border-left: 3px solid var(--blue);
+  background: rgba(0, 122, 255, 0.055);
+  border-radius: 4px 10px 10px 4px;
+}
+.re-quote .re-quote-body p {
+  margin: 0.22em 0;
+}
+.re-quote-author {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  border: none;
+  background: transparent;
+  outline: none;
+  color: var(--blue);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.1px;
+}
+.re-quote-author::placeholder {
+  color: rgba(0, 122, 255, 0.42);
+  font-weight: 500;
+}
+
+/* pull quote */
+.re-pullquote {
+  margin: 1.15em auto;
+  padding: 10px 26px;
+  max-width: 86%;
+  text-align: center;
+  font-style: italic;
+  font-size: 19px;
+  line-height: 1.42;
+  border-top: 0.5px solid var(--sep);
+  border-bottom: 0.5px solid var(--sep);
+  position: relative;
+}
+.re-pullquote .re-pullquote-body::before {
+  content: '“';
+  color: rgba(0, 122, 255, 0.55);
+  margin-right: 4px;
+}
+
+/* code — iOS grouped-gray surfaces */
+.rich-editor pre {
+  margin: 0.75em 0;
+  padding: 13px 15px;
+  background: var(--grouped);
+  border: 0.5px solid var(--sep);
+  border-radius: 10px;
+  overflow-x: auto;
+  font-family: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 14.5px;
+  line-height: 1.5;
+  letter-spacing: 0;
+}
+
+/* divider — hairline */
+.rich-editor hr {
+  border: none;
+  height: 18px;
+  position: relative;
+  margin: 0.5em 0;
+}
+.rich-editor hr::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 9px;
+  border-top: 0.5px solid rgba(60, 60, 67, 0.28);
+}
+
+/* footer */
+.rich-editor footer {
+  color: var(--secondary);
+  font-size: 14.5px;
+  margin-top: 1.3em;
+}
+
+/* lists */
+.rich-editor ul,
+.rich-editor ol {
+  padding-left: 28px;
+  margin: 0.35em 0;
+}
+.rich-editor ul ul,
+.rich-editor ol ol,
+.rich-editor ul ol,
+.rich-editor ol ul {
+  margin: 0.1em 0;
+}
+.rich-editor li {
+  margin: 0.16em 0;
+}
+.rich-editor ul li::marker {
+  color: var(--blue);
+}
+.rich-editor ol li::marker {
+  color: var(--secondary);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* checklist — iOS Reminders style */
+.re-task {
+  list-style: none;
+  display: flex;
+  gap: 11px;
+  align-items: flex-start;
+  margin-left: -28px;
+  padding-left: 2px;
+}
+.re-checkbox {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  margin-top: 3.5px;
+  border: 1.6px solid #c7c7cc;
+  border-radius: 50%;
+  background: #fff;
+  color: #fff;
+  font-size: 12px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: all 0.18s var(--spring);
+}
+.re-checkbox:active {
+  transform: scale(0.85);
+}
+.re-task.checked .re-checkbox {
+  background: var(--blue);
+  border-color: var(--blue);
+}
+.re-task.checked .re-task-body {
+  color: var(--tertiary);
+  text-decoration: line-through;
+  text-decoration-color: rgba(60, 60, 67, 0.3);
+}
+.re-task-body {
+  flex: 1;
+  min-width: 0;
+}
+.re-task-body p {
+  margin: 0.16em 0;
+}
+
+/* details / toggle */
+.re-details {
+  margin: 0.75em 0;
+  border: 0.5px solid var(--sep);
+  border-radius: 10px;
+  background: rgba(120, 120, 128, 0.045);
+  padding: 2px 4px;
+}
+.re-details-arrow {
+  position: absolute;
+  margin: 11px 0 0 8px;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: rgba(0, 122, 255, 0.12);
+  color: var(--blue);
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 11px;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  transition: transform 0.22s var(--spring), background 0.15s ease;
+}
+.re-details-arrow:active {
+  transform: scale(0.86);
+}
+.re-details-body {
+  padding: 8px 12px 8px 38px;
+}
+.re-details-body summary {
+  font-weight: 600;
+  font-size: 17px;
+  letter-spacing: -0.2px;
+  list-style: none;
+  cursor: text;
+  margin: 0.15em 0;
+}
+.re-details-body summary::-webkit-details-marker {
+  display: none;
+}
+.re-details.collapsed .re-details-body > *:not(summary) {
+  display: none;
+}
+
+/* inline marks */
+.rich-editor code {
+  font-family: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.88em;
+  background: var(--fill);
+  border-radius: 5px;
+  padding: 0.12em 0.38em;
+  letter-spacing: 0;
+}
+.rich-editor mark {
+  background: rgba(255, 214, 10, 0.55);
+  border-radius: 3px;
+  padding: 0 0.12em;
+}
+.rich-editor sub,
+.rich-editor sup {
+  font-size: 0.72em;
+}
+
+/* spoiler — animated particle shimmer like Telegram */
+.rich-editor tg-spoiler {
+  color: transparent;
+  border-radius: 4px;
+  padding: 0 0.12em;
+  background: linear-gradient(100deg, #b9c1cb 30%, #cfd6de 46%, #aab3be 60%, #b9c1cb 78%);
+  background-size: 220px 100%;
+  animation: iosSpoiler 1.5s linear infinite;
+  transition: color 0.2s ease;
+}
+.rich-editor tg-spoiler:hover,
+.rich-editor tg-spoiler::selection {
+  animation: none;
+  background: rgba(185, 194, 205, 0.3);
+  color: inherit;
+}
+
+/* ── media blocks ──────────────────────────────────────────────── */
+
+.re-media {
+  margin: 0.85em 0;
+}
+.re-media-frame {
+  position: relative;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--grouped);
+}
+.re-media-frame img,
+.re-media-frame video {
+  display: block;
+  width: 100%;
+  max-height: 430px;
+  object-fit: cover;
+}
+.re-media-frame audio {
+  display: block;
+  width: 100%;
+  margin: 14px 0;
+}
+.re-media-frame.spoilered img,
+.re-media-frame.spoilered video {
+  filter: blur(22px) saturate(1.25);
+  transform: scale(1.06);
+}
+.re-media-frame.spoilered::after {
+  content: '🙈 Spoiler';
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-weight: 600;
+  font-size: 14px;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+  letter-spacing: -0.1px;
+}
+.re-media-tools {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 5px;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: all 0.2s var(--spring);
+}
+.re-media-frame:hover .re-media-tools {
+  opacity: 1;
+  transform: none;
+}
+.re-tool {
+  border: none;
+  background: rgba(20, 22, 26, 0.62);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 16px;
+  cursor: pointer;
+  letter-spacing: -0.1px;
+  transition: background 0.15s ease, transform 0.15s var(--spring);
+}
+.re-tool:active {
+  transform: scale(0.92);
+}
+.re-tool.danger:active {
+  background: var(--red);
+}
+.re-media-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 36px 16px;
+  border: none;
+  background: rgba(0, 122, 255, 0.05);
+  color: var(--blue);
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  letter-spacing: -0.2px;
+  transition: background 0.15s ease;
+}
+.re-media-placeholder:active {
+  background: rgba(0, 122, 255, 0.1);
+}
+.re-media-ph-icon {
+  font-size: 28px;
+}
+
+.re-caption {
+  margin-top: 6px;
+  padding: 2px 6px;
+  font-size: 14px;
+  color: var(--secondary);
+  border-radius: 6px;
+  min-height: 1.4em;
+  letter-spacing: -0.1px;
+}
+.re-caption:focus {
+  outline: none;
+  background: var(--fill);
+}
+.re-caption:empty::before {
+  content: attr(data-placeholder);
+  color: var(--tertiary);
+}
+
+/* gallery — collage / slideshow */
+.re-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+  gap: 2px;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.re-gallery-grid[data-mode='slideshow'] {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+}
+.re-gallery-grid[data-mode='slideshow'] .re-gallery-tile {
+  flex: 0 0 250px;
+  scroll-snap-align: start;
+  aspect-ratio: 16 / 10;
+}
+.re-gallery-tile {
+  position: relative;
+  aspect-ratio: 1;
+  background: var(--grouped);
+}
+.re-gallery-tile img,
+.re-gallery-tile video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.re-gallery-tile audio {
+  margin: 42px 8px;
+}
+.re-gallery-tile.spoilered img,
+.re-gallery-tile.spoilered video {
+  filter: blur(16px);
+  transform: scale(1.07);
+}
+.re-tile-tools {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+.re-gallery-tile:hover .re-tile-tools {
+  opacity: 1;
+}
+.re-gallery-add {
+  border: none;
+  background: rgba(0, 122, 255, 0.07);
+  color: var(--blue);
+  font-size: 26px;
+  font-weight: 300;
+  cursor: pointer;
+  min-height: 92px;
+  transition: background 0.15s ease;
+}
+.re-gallery-add:active {
+  background: rgba(0, 122, 255, 0.14);
+}
+.re-gallery-mode {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 2px;
+  padding: 5px;
+  background: rgba(120, 120, 128, 0.08);
+}
+.re-gallery-mode button {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 6px 0;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--secondary);
+  cursor: pointer;
+  letter-spacing: -0.1px;
+  transition: all 0.2s var(--spring);
+}
+.re-gallery-mode button.on {
+  background: #fff;
+  color: var(--blue);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* map — iOS Maps-style placeholder */
+.re-map {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 190px;
+  border-radius: 10px;
+  cursor: pointer;
+  background:
+    radial-gradient(circle at 32% 36%, rgba(90, 200, 250, 0.28), transparent 48%),
+    linear-gradient(140deg, #dcebfa, #e6f3ec);
+  border: 0.5px solid rgba(60, 60, 67, 0.12);
+  transition: filter 0.15s ease, transform 0.15s var(--spring);
+}
+.re-map:active {
+  transform: scale(0.995);
+  filter: brightness(0.98);
+}
+.re-map-pin {
+  font-size: 30px;
+}
+.re-map-label {
+  color: #1c5a99;
+  font-weight: 600;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.2px;
+}
+.re-map-edit {
+  color: var(--blue);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* math / time / anchor chips */
+.re-math-block {
+  margin: 0.85em 0;
+  padding: 16px;
+  text-align: center;
+  border: 0.5px dashed rgba(0, 122, 255, 0.4);
+  border-radius: 10px;
+  background: rgba(0, 122, 255, 0.035);
+  cursor: pointer;
+  overflow-x: auto;
+  transition: background 0.15s ease;
+}
+.re-math-block:active {
+  background: rgba(0, 122, 255, 0.08);
+}
+.re-math-block.selected {
+  border-color: var(--blue);
+  background: rgba(0, 122, 255, 0.08);
+}
+.re-math-empty {
+  color: var(--tertiary);
+  font-size: 14px;
+}
+.re-math-inline {
+  display: inline-block;
+  padding: 0 5px;
+  border-radius: 5px;
+  background: rgba(0, 122, 255, 0.08);
+  cursor: pointer;
+}
+.re-time-chip {
+  display: inline-block;
+  padding: 0 7px;
+  border-radius: 7px;
+  background: rgba(0, 122, 255, 0.1);
+  color: var(--blue);
+  font-weight: 600;
+  font-size: 0.92em;
+  white-space: nowrap;
+}
+.re-anchor-chip {
+  display: inline-block;
+  padding: 0 7px;
+  border-radius: 7px;
+  border: 1px dashed rgba(60, 60, 67, 0.35);
+  color: var(--secondary);
+  font-size: 0.85em;
+  font-weight: 600;
+}
+
+/* tables — iOS hairline style */
+.rich-editor table {
+  border-collapse: collapse;
+  margin: 0.85em 0;
+  width: 100%;
+}
+.rich-editor th,
+.rich-editor td {
+  border: 0.5px solid rgba(60, 60, 67, 0.22);
+  padding: 8px 12px;
+  min-width: 72px;
+  vertical-align: top;
+  text-align: left;
+}
+.rich-editor th {
+  background: rgba(120, 120, 128, 0.07);
+  font-weight: 600;
+}
+.rich-editor th p,
+.rich-editor td p {
+  margin: 0.1em 0;
+}
+.rich-editor caption {
+  caption-side: top;
+  text-align: left;
+  font-weight: 600;
+  font-size: 14.5px;
+  color: var(--secondary);
+  padding: 4px 2px;
+}
+.rich-editor td[valign='middle'],
+.rich-editor th[valign='middle'] {
+  vertical-align: middle;
+}
+.rich-editor td[valign='bottom'],
+.rich-editor th[valign='bottom'] {
+  vertical-align: bottom;
+}
+.rich-editor td[align='center'],
+.rich-editor th[align='center'] {
+  text-align: center;
+}
+.rich-editor td[align='right'],
+.rich-editor th[align='right'] {
+  text-align: right;
+}
+
+/* ── keyframes ─────────────────────────────────────────────────── */
+
+@keyframes iosSheetUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+@keyframes iosSheetUpCenter {
+  from {
+    transform: translateX(-50%) translateY(100%);
+  }
+  to {
+    transform: translateX(-50%) translateY(0);
+  }
+}
+@keyframes iosFade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes iosBannerDown {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -18px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+@keyframes iosSpoiler {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 220px 0;
+  }
+}
