@@ -31,7 +31,7 @@
 
 @font-face {
   font-family: 'heading';
-  src: url('/fonts/mw_bold.ttf') format('ttf');
+  src: url('/fonts/mw_bold.ttf') format('truetype');
   font-style: normal;
 }
 
