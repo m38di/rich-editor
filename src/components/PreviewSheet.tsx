@@ -27,7 +27,7 @@ export function PreviewSheet({ title, fragment, standalone, onClose, notify }: P
   }
 
   const download = () => {
-    downloadHtml(`${slugify(title)}.html`, standalone)
+    downloadHtml(`${slugify(title)}.html`, fragment)
     notify('Downloading standalone .html')
   }
 
