@@ -82,24 +82,93 @@ class MediaFigureView implements NodeView {
     )
   }
 
-  private pickFile() {
+  private async pickFile() {
     const input = document.createElement('input')
+
     input.type = 'file'
+
     input.accept =
-      this.node.attrs.kind === 'audio' ? 'audio/*' : this.node.attrs.kind === 'image' ? 'image/*' : 'video/*'
-    input.onchange = () => {
+      this.node.attrs.kind === 'audio'
+        ? 'audio/*'
+        : this.node.attrs.kind === 'image'
+          ? 'image/*'
+          : 'video/*'
+
+    input.onchange = async () => {
       const file = input.files?.[0]
       if (!file) return
-      const src = URL.createObjectURL(file)
-      const kind = file.type.startsWith('audio')
-        ? 'audio'
-        : file.type.startsWith('video')
-          ? file.name.toLowerCase().endsWith('.gif')
-            ? 'animation'
-            : 'video'
-          : 'image'
-      this.setAttrs({ src, kind })
+
+      // Local preview URL (optional)
+      const localSrc = URL.createObjectURL(file)
+
+      const kind =
+        file.type.startsWith('audio/')
+          ? 'audio'
+          : file.type.startsWith('video/')
+            ? file.name.toLowerCase().endsWith('.gif')
+              ? 'animation'
+              : 'video'
+            : 'image'
+
+      // Show the selected file immediately
+      this.setAttrs({
+        src: localSrc,
+        kind,
+        uploading: true
+      })
+
+      try {
+        const form = new FormData()
+
+        form.append('source', file, file.name)
+        form.append('key', '6d207e02198a847aa98d0a2a901485a5')
+        form.append('action', 'upload')
+        form.append('format', 'json')
+
+        const response = await fetch(
+          'https://freeimage.host/api/1/upload',
+          {
+            method: 'POST',
+            body: form
+          }
+        )
+
+        if (!response.ok) {
+          throw new Error(`Upload failed: ${response.status}`)
+        }
+
+        const result = await response.json()
+
+        if (
+          result.status_code !== 200 ||
+          !result.image?.url
+        ) {
+          throw new Error(
+            result.error?.message || 'Upload failed'
+          )
+        }
+
+        // Replace blob URL with permanent uploaded URL
+        this.setAttrs({
+          src: result.image.url,
+          kind,
+          uploading: false
+        })
+
+        // The local blob URL is no longer needed
+        URL.revokeObjectURL(localSrc)
+
+        console.log('Uploaded URL:', result.image.url)
+      } catch (error) {
+        console.error('File upload failed:', error)
+
+        this.setAttrs({
+          uploading: false,
+          uploadError: true
+        })
+      }
     }
+
     input.click()
   }
 
