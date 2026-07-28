@@ -130,40 +130,52 @@ class MediaFigureView implements NodeView {
           }
         )
 
-        if (!response.ok) {
-          throw new Error(`Upload failed: ${response.status}`)
-        }
+        const rawText = await response.text()
 
-        const result = await response.json()
+        console.log('Upload status:', response.status)
+        console.log('Upload response:', rawText)
 
-        if (
-          result.status_code !== 200 ||
-          !result?.url
-        ) {
+        let result: any
+
+        try {
+          result = JSON.parse(rawText)
+        } catch {
           throw new Error(
-            result.error?.message || 'Upload failed'
+            `Worker returned invalid JSON: ${rawText}`
           )
         }
 
-        // Replace blob URL with permanent uploaded URL
+        if (!response.ok) {
+          throw new Error(
+            result.error ||
+            result.message ||
+            `Worker returned HTTP ${response.status}`
+          )
+        }
+
+        console.log('Parsed result:', result)
+
+        const uploadedUrl =
+          result.url ||
+          result.image?.url ||
+          result.data?.url
+
+        if (!uploadedUrl) {
+          console.error('No URL found in:', result)
+
+          throw new Error(
+            result.error ||
+            result.message ||
+            'Upload succeeded but no image URL was returned'
+          )
+        }
+
         this.setAttrs({
-          src: result.url,
+          src: uploadedUrl,
           kind,
           uploading: false
         })
-
-        // The local blob URL is no longer needed
-        URL.revokeObjectURL(localSrc)
-
-        console.log('Uploaded URL:', result.url)
-      } catch (error) {
-        console.error('File upload failed:', error)
-
-        this.setAttrs({
-          uploading: false,
-          uploadError: true
-        })
-      }
+      } catch (e) {}
     }
 
     input.click()
