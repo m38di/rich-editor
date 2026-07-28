@@ -138,7 +138,7 @@ export function TextTypeMenu({ info, run, close }: TextTypeMenuProps) {
             icon={<Iv name={`h${l}`} size={17} />}
             iconBg="#007AFF"
             label={`Heading ${l}`}
-            labelStyle={{ fontSize: headingSizes[l - 1], fontWeight: 700, letterSpacing: '-0.4px' }}
+            labelStyle={{ fontSize: headingSizes[l - 1], fontFamily: "heading", letterSpacing: '-0.4px' }}
             active={info.block.type === 'heading' && info.block.level === l}
             keep
             onClick={() => pick(setTextType('heading', l))}
