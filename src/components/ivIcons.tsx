@@ -117,7 +117,6 @@ export function Iv({ name, size = 22, className }: IvProps & { name: string }) {
       height={size}
       viewBox={icon.vb}
       className={className}
-      style={{ color: typeof color !== "undefined" ? color : "white" }}
       aria-hidden
       dangerouslySetInnerHTML={{ __html: icon.inner }}
     />
