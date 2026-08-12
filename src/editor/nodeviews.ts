@@ -291,27 +291,31 @@ class MediaGroupView implements NodeView {
   }
 
   private addFiles() {
-    const input = document.createElement('input')
-    input.type = 'file'
-    input.multiple = true
-    input.accept = 'image/*,video/*,audio/*'
-    input.onchange = () => {
-      const files = Array.from(input.files || [])
-      if (!files.length) return
-      const items = this.items()
-      for (const file of files.slice(0, 10 - items.length)) {
-        const kind = file.type.startsWith('video')
-          ? file.name.toLowerCase().endsWith('.gif')
-            ? 'animation'
-            : 'video'
-          : file.type.startsWith('audio')
-            ? 'audio'
-            : 'image'
-        items.push({ kind, src: URL.createObjectURL(file), spoiler: false })
-      }
-      this.setItems(items)
-    }
-    input.click()
+    const pos = this.getPos()
+    if (pos === undefined) return
+
+    bus.emit('dialog:media-url', { pos })
+    // const input = document.createElement('input')
+    // input.type = 'file'
+    // input.multiple = true
+    // input.accept = 'image/*,video/*,audio/*'
+    // input.onchange = () => {
+    //   const files = Array.from(input.files || [])
+    //   if (!files.length) return
+    //   const items = this.items()
+    //   for (const file of files.slice(0, 10 - items.length)) {
+    //     const kind = file.type.startsWith('video')
+    //       ? file.name.toLowerCase().endsWith('.gif')
+    //         ? 'animation'
+    //         : 'video'
+    //       : file.type.startsWith('audio')
+    //         ? 'audio'
+    //         : 'image'
+    //     items.push({ kind, src: URL.createObjectURL(file), spoiler: false })
+    //   }
+    //   this.setItems(items)
+    // }
+    // input.click()
   }
 
   private render() {
