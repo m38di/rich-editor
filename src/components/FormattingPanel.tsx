@@ -68,7 +68,7 @@ export function FormattingPanel({ info, run, onOpenLink, onOpenDate, onOpenMath 
       { key: 'date', label: <Calendar size={19} />, title: 'Date & time', disabled: empty, onClick: onOpenDate },
     ],
     [
-      { key: 'math', label: <Iv name="formatting_math" size={20} />, title: 'Inline math', disabled: empty, onClick: onOpenMath },
+      { key: 'math', label: <Iv name="math" size={20} />, title: 'Inline math', disabled: empty, onClick: onOpenMath },
       { key: 'clear', label: <ClearFormat size={19} />, title: 'Clear formatting', disabled: empty, onClick: () => run(clearFormatting) },
     ],
   ]
