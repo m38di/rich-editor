@@ -8,6 +8,7 @@ export type BusEvents = {
   'dialog:map': { pos: number }
   'dialog:math': { pos: number; inline: boolean }
   'dialog:link': void
+  'dialog:media-url': { pos: number }
   'toast': { text: string }
 }
 
