@@ -102,12 +102,14 @@ export function MediaUrlDialog({
           <div className="form-row">
             <input
               className="form-input left"
+              type="url"
               value={url}
               autoFocus
-              onChange={(e) => setUrl(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && apply()}
               placeholder="https://example.com/image.jpg"
-              aria-label="Media URL"
+              onChange={(e) => setUrl(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') apply()
+              }}
               autoCapitalize="off"
               autoCorrect="off"
               spellCheck={false}
