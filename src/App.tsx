@@ -22,6 +22,7 @@ import {
   DateDialog,
   MathDialog,
   MapDialog,
+  MediaUrlDialog,
   TableSizeDialog,
   MergeDialog,
   CaptionDialog,
@@ -47,6 +48,7 @@ type DialogState =
   | { type: 'date' }
   | { type: 'math'; pos: number | null; inline: boolean; tex: string }
   | { type: 'map'; pos: number | null; lat: number; long: number; zoom: number }
+  | { type: 'media-url'; pos: number }
   | { type: 'table' }
   | { type: 'merge' }
   | { type: 'caption' }
@@ -95,6 +97,12 @@ export default function App() {
     const offMath = bus.on('dialog:math', ({ pos, inline }) => {
       const node = viewRef.current?.state.doc.nodeAt(pos)
       setDialog({ type: 'math', pos, inline, tex: node?.attrs.tex ?? '' })
+    })
+    const offMediaUrl = bus.on('dialog:media-url', ({ pos }) => {
+      setDialog({
+        type: 'media-url',
+        pos,
+      })
     })
     const offToast = bus.on('toast', ({ text }) => notify(text))
     return () => {
