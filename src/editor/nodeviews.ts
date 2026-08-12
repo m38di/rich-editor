@@ -365,22 +365,22 @@ class MediaGroupView implements NodeView {
     }
 
     // mode toggle — Android shows it from 2 items, 320ms transition
-    if (items.length >= 2) {
-      const toggle = el('div', 're-gallery-mode re-stop')
-      for (const m of ['collage', 'slideshow']) {
-        const b = el('button', m === mode ? 'on' : '', m === 'collage' ? 'Collage' : 'Slideshow')
-        b.type = 'button'
-        b.onclick = () => {
-          const pos = this.getPos()
-          if (pos === undefined) return
-          this.view.dispatch(
-            this.view.state.tr.setNodeMarkup(pos, undefined, { ...this.node.attrs, mode: m }),
-          )
-        }
-        toggle.append(b)
-      }
-      this.grid.append(toggle)
-    }
+    // if (items.length >= 2) {
+    //   const toggle = el('div', 're-gallery-mode re-stop')
+    //   for (const m of ['collage', 'slideshow']) {
+    //     const b = el('button', m === mode ? 'on' : '', m === 'collage' ? 'Collage' : 'Slideshow')
+    //     b.type = 'button'
+    //     b.onclick = () => {
+    //       const pos = this.getPos()
+    //       if (pos === undefined) return
+    //       this.view.dispatch(
+    //         this.view.state.tr.setNodeMarkup(pos, undefined, { ...this.node.attrs, mode: m }),
+    //       )
+    //     }
+    //     toggle.append(b)
+    //   }
+    //   this.grid.append(toggle)
+    // }
   }
 
   update(node: Node): boolean {
