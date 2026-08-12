@@ -108,6 +108,7 @@ export default function App() {
     return () => {
       offMap()
       offMath()
+      offMediaUrl()
       offToast()
     }
   }, [viewRef, notify])
