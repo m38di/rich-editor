@@ -67,6 +67,11 @@ const chip = (active: boolean) =>
 
 //
 
+interface MediaUrlDialogProps {
+  onClose: () => void
+  onAdd: (urls: string[]) => void
+}
+
 export function MediaUrlDialog({
   onClose,
   onAdd,
