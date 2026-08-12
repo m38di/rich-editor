@@ -65,6 +65,59 @@ const chip = (active: boolean) =>
       : 'border-ios-sep bg-white text-ios-secondary'
   }`
 
+//
+
+export function MediaUrlDialog({
+  onClose,
+  onAdd,
+}: {
+  onClose: () => void
+  onAdd: (url: string) => void
+}) {
+  const [url, setUrl] = useState('')
+
+  const apply = () => {
+    const value = url.trim()
+    if (!value) return
+
+    onAdd(value)
+    onClose()
+  }
+
+  return (
+    <SheetDialog
+      title="Add Media"
+      onClose={onClose}
+      onDone={apply}
+      doneLabel="Add"
+      doneDisabled={!url.trim()}
+    >
+      <div className="px-2 pb-2">
+        <div className="ios-form">
+          <div className="form-row">
+            <input
+              className="form-input left"
+              value={url}
+              autoFocus
+              onChange={(e) => setUrl(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && apply()}
+              placeholder="https://example.com/image.jpg"
+              aria-label="Media URL"
+              autoCapitalize="off"
+              autoCorrect="off"
+              spellCheck={false}
+            />
+          </div>
+        </div>
+
+        <p className="form-hint">
+          Enter a direct URL to an image, video, audio file, or GIF.
+        </p>
+      </div>
+    </SheetDialog>
+  )
+}
+
 // ── link dialog ─────────────────────────────────────────────────────────
 
 interface LinkDialogProps {
