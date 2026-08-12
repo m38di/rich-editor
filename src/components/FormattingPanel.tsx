@@ -61,7 +61,7 @@ export function FormattingPanel({ info, run, onOpenLink, onOpenDate, onOpenMath 
       { key: 'mark', label: <Iv name="formatting_marked" size={20} />, title: 'Highlight', active: info.marks.mark, onClick: () => run(toggleHighlight) },
     ],
     [
-      { key: 'quote', label: <Iv name="formatting_quote" size={20} />, title: info.block.inQuote ? 'Unquote' : 'Quote', active: info.block.inQuote, onClick: () => run(setTextType(info.block.inQuote ? 'unquote' : 'quote')) },
+      { key: 'quote', label: <Iv name="quote" size={20} />, title: info.block.inQuote ? 'Unquote' : 'Quote', active: info.block.inQuote, onClick: () => run(setTextType(info.block.inQuote ? 'unquote' : 'quote')) },
     ],
     [
       { key: 'link', label: <Iv name="media_link_24" size={20} />, title: 'Link (Ctrl+K)', disabled: empty, active: !!info.marks.link, onClick: onOpenLink },
