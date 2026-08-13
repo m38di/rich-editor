@@ -65,6 +65,97 @@ const chip = (active: boolean) =>
       : 'border-ios-sep bg-white text-ios-secondary'
   }`
 
+// ── custom emoji dialog (Android: custom emoji entity → tg-emoji) ───────
+
+interface EmojiDialogProps {
+  viewRef: React.MutableRefObject<EditorView | null>
+  run: (cmd: Command) => void
+  pos: number | null
+  initialEmojiId?: string
+  initialEmoji?: string
+  onClose: () => void
+  notify: (t: string) => void
+}
+
+export function EmojiDialog({
+  viewRef,
+  run,
+  pos,
+  initialEmojiId = '',
+  initialEmoji = '',
+  onClose,
+  notify,
+}: EmojiDialogProps) {
+  const [emojiId, setEmojiId] = useState(initialEmojiId)
+  const [emoji, setEmoji] = useState(initialEmoji)
+
+  const apply = () => {
+    const id = emojiId.trim()
+    const em = emoji.trim()
+    if (!id || !em) return
+
+    const view = viewRef.current
+    if (pos !== null && view) {
+      const node = view.state.doc.nodeAt(pos)
+      if (node) {
+        view.dispatch(view.state.tr.setNodeMarkup(pos, undefined, { emojiId: id, emoji: em }))
+        view.focus()
+        onClose()
+        return
+      }
+    }
+
+    run(insertCustomEmoji(id, em))
+    notify('Custom emoji inserted')
+    onClose()
+  }
+
+  return (
+    <SheetDialog
+      title="Custom Emoji"
+      onClose={onClose}
+      onDone={apply}
+      doneLabel={pos !== null ? 'Save' : 'Insert'}
+      doneDisabled={!emojiId.trim() || !emoji.trim()}
+    >
+      <div className="px-2 pb-2">
+        <div className="ios-form">
+          <div className="form-row">
+            <span className="form-label">Emoji ID</span>
+            <input
+              className="form-input tabular-nums"
+              value={emojiId}
+              autoFocus
+              onChange={(e) => setEmojiId(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && apply()}
+              placeholder="5445241975471103753"
+              aria-label="Custom emoji ID"
+              autoCapitalize="off"
+              autoCorrect="off"
+              spellCheck={false}
+            />
+          </div>
+          <div className="form-row">
+            <span className="form-label">Emoji</span>
+            <input
+              className="form-input"
+              value={emoji}
+              onChange={(e) => setEmoji(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && apply()}
+              placeholder="🗒"
+              aria-label="Fallback emoji"
+            />
+          </div>
+        </div>
+        <p className="form-hint">
+          Emoji ID is the Telegram document_id of the custom emoji. Exported as
+          &lt;tg-emoji emoji-id&gt; with the fallback emoji as its text content.
+        </p>
+      </div>
+    </SheetDialog>
+  )
+}
+
 //
 
 interface MediaUrlDialogProps {
