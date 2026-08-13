@@ -806,43 +806,62 @@ li.ProseMirror-selectednode {
   background: rgba(120, 120, 128, 0.045);
   padding: 2px 4px;
 }
-.re-details-arrow {
-  position: absolute;
-  margin: 11px 0 0 8px;
-  width: 24px;
-  height: 24px;
-  border: none;
-  background: rgba(0, 122, 255, 0.12);
-  color: var(--blue);
-  border-radius: 7px;
-  cursor: pointer;
-  font-size: 11px;
-  z-index: 1;
-  display: grid;
-  place-items: center;
-  transition: transform 0.22s var(--spring), background 0.15s ease;
-}
-.re-details-arrow:active {
-  transform: scale(0.86);
-}
+
 .re-details-body {
-  padding: 8px 12px 8px 38px;
+  padding: 8px 12px;
 }
+
+/* Summary row */
 .re-details-body summary {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+
   font-weight: 600;
   font-size: 17px;
   letter-spacing: -0.2px;
+
   list-style: none;
-  cursor: text;
+  cursor: pointer;
   margin: 0.15em 0;
+  min-height: 28px;
+  user-select: none;
 }
+
 .re-details-body summary::-webkit-details-marker {
   display: none;
 }
+
+/* Chevron */
+.re-details-body summary::before {
+  content: '';
+  flex: 0 0 8px;
+
+  width: 7px;
+  height: 7px;
+
+  border-right: 1.8px solid currentColor;
+  border-bottom: 1.8px solid currentColor;
+
+  transform: rotate(45deg);
+  transition: transform 0.2s var(--spring);
+}
+
+/* Open = chevron up */
+.re-details:not(.collapsed) .re-details-body summary::before {
+  transform: rotate(225deg);
+}
+
+/* Collapsed = chevron down */
+.re-details.collapsed .re-details-body summary::before {
+  transform: rotate(45deg);
+}
+
+/* Hide body when collapsed */
 .re-details.collapsed .re-details-body > *:not(summary) {
   display: none;
 }
-
 /* inline marks */
 .rich-editor code {
   font-family: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
