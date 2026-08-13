@@ -15,6 +15,7 @@ import { OrderedListType, setOrderedListAttrs } from '../editor/commands'
 import { TIME_FORMATS, formatTime } from '../lib/util'
 import { Minus, Plus } from './icons'
 import { Iv } from './ivIcons'
+import { Sheet } from './Sheet'
 
 // ── sheet shell with Cancel / title / Done header ───────────────────────
 
