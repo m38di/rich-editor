@@ -11,6 +11,7 @@ import { schema, N } from './schema'
 import { buildKeymap, markdownRules, slashCommandPlugin, selectionReporter, SlashState, SelectionInfo } from './plugins'
 import { nodeViews } from './nodeviews'
 import { handleOrderedListMarkerClick } from './orderedListClick'
+import { updateBulletMarkers } from './listMarkers'
 
 export interface EditorOptions {
   onSlash: (s: SlashState) => void
@@ -52,6 +53,13 @@ export function createEditor(mount: HTMLElement, opts: EditorOptions): EditorVie
     state,
   
     nodeViews,
+  
+    dispatchTransaction(tr) {
+      const newState = this.state.apply(tr)
+      this.updateState(newState)
+  
+      updateBulletMarkers(this.dom)
+    },
   
     handleDOMEvents: {
       click: (view, event) => {
