@@ -187,9 +187,11 @@ function serializeBlock(node: Node): string {
 
     case 'bullet_list': {
       let inner = ''
+    
       node.forEach((item) => {
-        inner += `<li>${item.firstChild ? renderInline(item.firstChild) : ''}</li>`
+        inner += serializeListItem(item)
       })
+    
       return `<ul>${inner}</ul>`
     }
 
@@ -203,6 +205,19 @@ function serializeBlock(node: Node): string {
       if (node.attrs.type !== '1') {
         attrs.push(`type="${escapeAttr(node.attrs.type)}"`)
       }
+    
+      let inner = ''
+    
+      node.forEach((item) => {
+        inner += serializeListItem(item)
+      })
+    
+      const attrString = attrs.length
+        ? ` ${attrs.join(' ')}`
+        : ''
+    
+      return `<ol${attrString}>${inner}</ol>`
+    }
     
       let inner = ''
     
@@ -221,13 +236,12 @@ function serializeBlock(node: Node): string {
 
     case 'task_list': {
       let inner = ''
+    
       node.forEach((item) => {
-        const checked = item.attrs.checked ? ' checked' : ''
-        inner += `<li><input type="checkbox"${checked}>${
-          item.firstChild ? renderInline(item.firstChild) : ''
-        }</li>`
+        inner += serializeListItem(item, true)
       })
-      return `<ul>${inner}</ul>`
+    
+      return `<ul class="task-list">${inner}</ul>`
     }
 
     case 'details': {
