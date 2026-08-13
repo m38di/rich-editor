@@ -175,12 +175,29 @@ function serializeBlock(node: Node): string {
     }
 
     case 'ordered_list': {
-      const start = node.attrs.start > 1 ? ` start="${node.attrs.start}"` : ''
+      const attrs: string[] = []
+    
+      if (node.attrs.start !== 1) {
+        attrs.push(`start="${node.attrs.start}"`)
+      }
+    
+      if (node.attrs.type !== '1') {
+        attrs.push(`type="${escapeAttr(node.attrs.type)}"`)
+      }
+    
       let inner = ''
+    
       node.forEach((item) => {
-        inner += `<li>${item.firstChild ? renderInline(item.firstChild) : ''}</li>`
+        inner += `<li>${
+          item.firstChild ? renderInline(item.firstChild) : ''
+        }</li>`
       })
-      return `<ol${start}>${inner}</ol>`
+    
+      const attrString = attrs.length
+        ? ` ${attrs.join(' ')}`
+        : ''
+    
+      return `<ol${attrString}>${inner}</ol>`
     }
 
     case 'task_list': {
