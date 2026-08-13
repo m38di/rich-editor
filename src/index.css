@@ -799,6 +799,7 @@ li.ProseMirror-selectednode {
 }
 
 /* details / toggle */
+/* details / toggle */
 .re-details {
   margin: 0.75em 0;
   border: 0.5px solid var(--sep);
@@ -813,30 +814,36 @@ li.ProseMirror-selectednode {
 
 /* Summary row */
 .re-details-body summary {
-  position: relative;
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
 
   font-weight: 600;
   font-size: 17px;
   letter-spacing: -0.2px;
 
   list-style: none;
-  cursor: pointer;
+  cursor: text;
   margin: 0.15em 0;
   min-height: 28px;
+
   user-select: none;
 }
 
+/* Remove browser's native triangle */
 .re-details-body summary::-webkit-details-marker {
   display: none;
 }
 
-/* Chevron */
+.re-details-body summary::marker {
+  content: '';
+}
+
+/* Custom chevron */
 .re-details-body summary::before {
   content: '';
-  flex: 0 0 8px;
+  display: block;
+  flex: 0 0 7px;
 
   width: 7px;
   height: 7px;
@@ -848,20 +855,21 @@ li.ProseMirror-selectednode {
   transition: transform 0.2s var(--spring);
 }
 
-/* Open = chevron up */
+/* OPEN → ↑ */
 .re-details:not(.collapsed) .re-details-body summary::before {
   transform: rotate(225deg);
 }
 
-/* Collapsed = chevron down */
+/* CLOSED → ↓ */
 .re-details.collapsed .re-details-body summary::before {
   transform: rotate(45deg);
 }
 
-/* Hide body when collapsed */
+/* Hide content while collapsed */
 .re-details.collapsed .re-details-body > *:not(summary) {
   display: none;
 }
+
 /* inline marks */
 .rich-editor code {
   font-family: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
