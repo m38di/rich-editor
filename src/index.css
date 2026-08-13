@@ -798,15 +798,23 @@ li.ProseMirror-selectednode {
   margin: 0.16em 0;
 }
 
-/* details / toggle */
+/* ── Details / Toggle ─────────────────────────────────────────────── */
+
 .re-details {
   position: relative;
   margin: 0.75em 0;
+
   border: 0.5px solid var(--sep);
   border-radius: 10px;
+
   background: rgba(120, 120, 128, 0.045);
+
   padding: 2px 4px;
+
+  overflow: hidden;
 }
+
+/* ── Chevron button ──────────────────────────────────────────────── */
 
 .re-details-arrow {
   position: absolute;
@@ -816,47 +824,91 @@ li.ProseMirror-selectednode {
   width: 24px;
   height: 24px;
 
-  border: none;
-  background: rgba(0, 122, 255, 0.12);
-  color: var(--blue);
+  padding: 0;
+  margin: 0;
+
+  border: 0;
   border-radius: 7px;
 
-  cursor: pointer;
-  font-size: 13px;
-  line-height: 1;
+  background: rgba(0, 122, 255, 0.12);
+  color: var(--blue);
 
-  z-index: 2;
+  cursor: pointer;
 
   display: grid;
   place-items: center;
 
+  z-index: 2;
+
   transition:
-    transform 0.22s var(--spring),
-    background 0.15s ease;
+    background 0.15s ease,
+    transform 0.2s var(--spring);
 }
 
+/* Chevron itself */
+.re-details-arrow::before {
+  content: '';
+
+  width: 7px;
+  height: 7px;
+
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+
+  transform: rotate(-45deg);
+
+  transition:
+    transform 0.28s var(--spring);
+}
+
+/* Closed → chevron points right */
+.re-details.collapsed .re-details-arrow::before {
+  transform: rotate(-45deg);
+}
+
+/* Open → chevron points down */
+.re-details:not(.collapsed) .re-details-arrow::before {
+  transform: rotate(45deg);
+}
+
+/* Button press */
 .re-details-arrow:active {
   transform: scale(0.86);
 }
 
-.re-details-body {
-  padding: 8px 12px 8px 38px;
+/* Hover */
+.re-details-arrow:hover {
+  background: rgba(0, 122, 255, 0.18);
 }
 
-/* The summary is the first PM child */
+/* ── Editable details content ────────────────────────────────────── */
+
+.re-details-body {
+  padding: 8px 12px 8px 38px;
+
+  min-height: 40px;
+}
+
+/* Summary / title */
 .re-details-body > summary {
   display: block;
 
   margin: 0.15em 0;
 
+  min-height: 24px;
+
   font-weight: 600;
   font-size: 17px;
+  line-height: 24px;
   letter-spacing: -0.2px;
 
   cursor: text;
+
   list-style: none;
+  outline: none;
 }
 
+/* Remove native marker if browser creates one */
 .re-details-body > summary::-webkit-details-marker {
   display: none;
 }
@@ -865,9 +917,52 @@ li.ProseMirror-selectednode {
   display: none;
 }
 
-/* Hide everything after summary when closed */
+/* ── Closed state ────────────────────────────────────────────────── */
+
+/*
+ * Keep summary visible.
+ * Hide everything after it.
+ */
 .re-details.collapsed .re-details-body > :not(summary) {
   display: none;
+}
+
+/* ── Open state ──────────────────────────────────────────────────── */
+
+.re-details:not(.collapsed) .re-details-body > :not(summary) {
+  display: block;
+}
+
+/* Don't force inline elements to block */
+.re-details:not(.collapsed) .re-details-body > summary {
+  display: block;
+}
+
+/* ── Content spacing ─────────────────────────────────────────────── */
+
+.re-details-body > p {
+  margin: 0.55em 0;
+}
+
+.re-details-body > p:first-of-type {
+  margin-top: 0.55em;
+}
+
+.re-details-body > p:last-child {
+  margin-bottom: 0.35em;
+}
+
+/* ── Focus ───────────────────────────────────────────────────────── */
+
+.re-details-arrow:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+/* ── Prevent native button appearance ───────────────────────────── */
+
+.re-details-arrow::-moz-focus-inner {
+  border: 0;
 }
 
 /* inline marks */
