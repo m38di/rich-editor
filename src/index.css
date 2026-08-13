@@ -699,8 +699,43 @@ li.ProseMirror-selectednode {
   list-style-type: disc;
 }
 
+.rich-editor ul,
+.rich-editor ol {
+  padding-left: 28px;
+  margin: 0.35em 0;
+}
+
+.rich-editor ul {
+  list-style-type: disc;
+}
+
 .rich-editor ol {
   list-style-type: decimal;
+}
+
+.rich-editor ol[type="1"] {
+  list-style-type: decimal;
+}
+
+.rich-editor ol[type="A"] {
+  list-style-type: upper-alpha;
+}
+
+.rich-editor ol[type="a"] {
+  list-style-type: lower-alpha;
+}
+
+.rich-editor ol[type="I"] {
+  list-style-type: upper-roman;
+}
+
+.rich-editor ol[type="i"] {
+  list-style-type: lower-roman;
+}
+
+.rich-editor li {
+  display: list-item;
+  margin: 0.16em 0;
 }
 
 .rich-editor ul ul {
