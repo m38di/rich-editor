@@ -324,6 +324,13 @@ export default function App() {
           }}
         />
       )}
+      {dialog?.type === 'ordered-list' && (
+        <OrderedListDialog
+          viewRef={viewRef}
+          pos={dialog.pos}
+          onClose={() => setDialog(null)}
+        />
+      )}
       {dialog?.type === 'table' && <TableSizeDialog run={run} onClose={() => setDialog(null)} />}
       {dialog?.type === 'merge' && (
         <MergeDialog viewRef={viewRef} onClose={() => setDialog(null)} notify={notify} />
