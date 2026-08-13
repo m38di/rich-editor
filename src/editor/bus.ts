@@ -9,6 +9,7 @@ export type BusEvents = {
   'dialog:math': { pos: number; inline: boolean }
   'dialog:link': void
   'dialog:media-url': { pos: number }
+  'dialog:ordered-list': { pos: number }
   'toast': { text: string }
 }
 
