@@ -30,6 +30,7 @@ import {
 import { PreviewSheet } from './components/PreviewSheet'
 import { bus } from './editor/bus'
 import { serializeRichHtml } from './editor/serializer'
+import { importHtml } from './editor/importer'
 import { buildStandaloneHtml, docTitle } from './editor/exportHtml'
 import { SlashDef } from './lib/util'
 import {
@@ -148,7 +149,7 @@ export default function App() {
   )
 
   // --
-  const importHtml = useCallback(() => {
+  const handleImportHtml = useCallback(() => {
     const input = document.createElement('input')
   
     input.type = 'file'
@@ -163,14 +164,34 @@ export default function App() {
         return
       }
   
-      const html = await file.text()
+      try {
+        const html = await file.text()
+        const importedDoc = importHtml(html)
   
-      // We will connect this to ProseMirror next.
-      console.log(html)
+        const view = viewRef.current
+        if (!view) {
+          notify('Editor is not ready')
+          return
+        }
+  
+        const tr = view.state.tr.replaceWith(
+          0,
+          view.state.doc.content.size,
+          importedDoc.content,
+        )
+  
+        view.dispatch(tr)
+        view.focus()
+  
+        notify('HTML imported')
+      } catch (error) {
+        console.error('HTML import failed:', error)
+        notify('Could not import HTML')
+      }
     }
   
     input.click()
-  }, [notify])
+  }, [notify, viewRef])
   // ── Generate → Preview → Download ──────────────────────────────────────
   const onGenerate = useCallback(() => {
     const view = viewRef.current
