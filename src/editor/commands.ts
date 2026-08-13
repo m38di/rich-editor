@@ -384,6 +384,19 @@ export function insertInlineMath(tex: string): Command {
   }
 }
 
+export function insertCustomEmoji(emojiId: string, emoji: string): Command {
+  return (state, dispatch) => {
+    if (dispatch) {
+      dispatch(
+        state.tr
+          .replaceSelectionWith(N.custom_emoji.create({ emojiId, emoji }))
+          .scrollIntoView(),
+      )
+    }
+    return true
+  }
+}
+
 export function insertTime(unix: number, format: string, display: string): Command {
   return (state, dispatch) => {
     if (dispatch) {
