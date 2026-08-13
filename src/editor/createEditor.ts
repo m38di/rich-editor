@@ -10,6 +10,7 @@ import { history } from 'prosemirror-history'
 import { schema, N } from './schema'
 import { buildKeymap, markdownRules, slashCommandPlugin, selectionReporter, SlashState, SelectionInfo } from './plugins'
 import { nodeViews } from './nodeviews'
+import { handleOrderedListMarkerClick } from './orderedListClick'
 
 export interface EditorOptions {
   onSlash: (s: SlashState) => void
@@ -49,7 +50,15 @@ export function createEditor(mount: HTMLElement, opts: EditorOptions): EditorVie
 
   return new EditorView(mount, {
     state,
+  
     nodeViews,
+  
+    handleDOMEvents: {
+      click: (view, event) => {
+        return handleOrderedListMarkerClick(view, event)
+      },
+    },
+  
     attributes: {
       class: 'rich-editor',
       spellcheck: 'false',
