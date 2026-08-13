@@ -627,8 +627,6 @@ class DetailsView implements NodeView {
   private sync() {
     const open = !!this.node.attrs.open
 
-    this.arrow.textContent = open ? '⌃' : '⌄'
-
     this.dom.classList.toggle('collapsed', !open)
   }
 
