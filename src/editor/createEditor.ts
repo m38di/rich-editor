@@ -54,13 +54,6 @@ export function createEditor(mount: HTMLElement, opts: EditorOptions): EditorVie
   
     nodeViews,
   
-    dispatchTransaction(tr) {
-      const newState = this.state.apply(tr)
-      this.updateState(newState)
-  
-      updateBulletMarkers(this.dom)
-    },
-  
     handleDOMEvents: {
       click: (view, event) => {
         return handleOrderedListMarkerClick(view, event)
@@ -72,7 +65,16 @@ export function createEditor(mount: HTMLElement, opts: EditorOptions): EditorVie
       spellcheck: 'false',
       'aria-label': 'Rich article editor',
     },
+  
+    dispatchTransaction(tr) {
+      const newState = view.state.apply(tr)
+      view.updateState(newState)
+  
+      updateBulletMarkers(view.dom as HTMLElement)
+    },
   })
-
+  
+  updateBulletMarkers(view.dom as HTMLElement)
+  
   return view
 }
