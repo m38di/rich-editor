@@ -266,7 +266,33 @@ export function setQuoteCite(cite: string | null): Command {
 }
 
 // ── Lists (Android: list runs with level/num, indent/outdent/renumber) ──
+export type OrderedListType = '1' | 'A' | 'a' | 'I' | 'i'
 
+export function setOrderedListAttrs(
+  pos: number,
+  start: number,
+  type: OrderedListType,
+): Command {
+  return (state, dispatch) => {
+    const node = state.doc.nodeAt(pos)
+
+    if (!node || node.type !== N.ordered_list) {
+      return false
+    }
+
+    if (dispatch) {
+      dispatch(
+        state.tr.setNodeMarkup(pos, undefined, {
+          ...node.attrs,
+          start: Math.max(1, Math.floor(start)),
+          type,
+        }),
+      )
+    }
+
+    return true
+  }
+}
 export const wrapBullet: Command = (s, d) => wrapInList(N.bullet_list)(s, d)
 export const wrapOrdered: Command = (s, d) => wrapInList(N.ordered_list)(s, d)
 export const wrapTask: Command = (s, d) => wrapInList(N.task_list)(s, d)
