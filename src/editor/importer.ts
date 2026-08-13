@@ -10,9 +10,5 @@ export function importHtml(html: string): PMNode {
 
   const dom = new DOMParser().parseFromString(html, 'text/html')
 
-  if (dom.querySelector('parsererror')) {
-    throw new Error('Invalid HTML')
-  }
-
   return ProseMirrorDOMParser.fromSchema(schema).parse(dom.body)
 }
