@@ -49,7 +49,7 @@ export function createEditor(mount: HTMLElement, opts: EditorOptions): EditorVie
     ],
   })
 
-  return new EditorView(mount, {
+  const view = new EditorView(mount, {
     state,
   
     nodeViews,
@@ -73,4 +73,6 @@ export function createEditor(mount: HTMLElement, opts: EditorOptions): EditorVie
       'aria-label': 'Rich article editor',
     },
   })
+
+  return view;
 }
