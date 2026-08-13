@@ -16,11 +16,11 @@ interface TopBarProps {
 export function TopBar({ canUndo, canRedo, chars, onUndo, onRedo }: TopBarProps) {
   return (
     <header className="ios-nav ios-vibrancy">
-      /* <div className="absolute left-1.5 flex items-center">
+      {/* <div className="absolute left-1.5 flex items-center">
         <button type="button" className="ios-icon-btn" title="Close" aria-label="Close">
           <ChevronLeft size={24} />
         </button>
-      </div> */
+      </div> */}
 
       <div className="pointer-events-none absolute inset-x-0 text-center">
         <div className="ios-nav-title">Rich Editor</div>
