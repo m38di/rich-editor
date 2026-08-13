@@ -218,21 +218,6 @@ function serializeBlock(node: Node): string {
     
       return `<ol${attrString}>${inner}</ol>`
     }
-    
-      let inner = ''
-    
-      node.forEach((item) => {
-        inner += `<li>${
-          item.firstChild ? renderInline(item.firstChild) : ''
-        }</li>`
-      })
-    
-      const attrString = attrs.length
-        ? ` ${attrs.join(' ')}`
-        : ''
-    
-      return `<ol${attrString}>${inner}</ol>`
-    }
 
     case 'task_list': {
       let inner = ''
