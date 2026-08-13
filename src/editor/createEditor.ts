@@ -74,5 +74,5 @@ export function createEditor(mount: HTMLElement, opts: EditorOptions): EditorVie
     },
   })
 
-  return view;
+  return view
 }
