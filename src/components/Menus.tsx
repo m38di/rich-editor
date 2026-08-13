@@ -152,18 +152,7 @@ export function TextTypeMenu({ info, run, close }: TextTypeMenuProps) {
           onClick={() => pick(setTextType('code'))}
         />
         <Row
-          icon={
-            <svg width={16} height={16} viewBox="0 0 72 72" aria-hidden>
-              <path
-                d="M 12.5 55 L 40.5 55 Q 43 55 43 57.5 L 43 57.5 Q 43 60 40.5 60 L 12.5 60 Q 10 60 10 57.5 L 10 57.5 Q 10 55 12.5 55 Z"
-                fill="currentColor"
-              />
-              <path
-                d="M 12.5 42 L 59.5 42 Q 62 42 62 44.5 L 62 44.5 Q 62 47 59.5 47 L 12.5 47 Q 10 47 10 44.5 L 10 44.5 Q 10 42 12.5 42 Z"
-                fill="currentColor"
-              />
-            </svg>
-          }
+          icon={<Iv name="footer" size={16} />}
           iconBg="#FF9500"
           label="Footer"
           active={info.block.type === 'footer'}
