@@ -40,6 +40,7 @@ import {
 import { EMOJI_SET, SlashDef, matchSlash } from '../lib/util'
 import { Iv } from './ivIcons'
 import { Check } from './icons'
+import { Sheet } from './Sheet'
 
 const keepSelection = (e: React.MouseEvent) => e.preventDefault()
 
@@ -50,26 +51,6 @@ const SLASH_ICON: Record<string, string> = {
   list: 'list', ordered: 'ordered_list', todo: 'todo', toggle: 'details',
   table: 'table', math: 'math', divider: 'divider',
   image: 'media', video: 'media', audio: 'audio', map: 'location',
-}
-
-// ── sheet primitives ────────────────────────────────────────────────────
-
-function Sheet({ onClose, title, children }: { onClose: () => void; title: string; children: React.ReactNode }) {
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
-
-  return (
-    <>
-      <div className="sheet-backdrop" onClick={onClose} aria-hidden />
-      <div className="ios-sheet" role="dialog" aria-label={title}>
-        <div className="grabber" />
-        <div className="sheet-scroll">{children}</div>
-      </div>
-    </>
-  )
 }
 
 interface RowProps {
