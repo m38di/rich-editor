@@ -220,11 +220,11 @@ const nodes: Record<string, NodeSpec> = {
   },
 
   list_item: {
-    content: 'paragraph',
+    content: 'paragraph block*',
     parseDOM: [{ tag: 'li' }],
     toDOM: () => ['li', 0],
   },
-
+  
   task_list: {
     content: 'task_item+',
     group: 'block',
@@ -237,10 +237,10 @@ const nodes: Record<string, NodeSpec> = {
     ],
     toDOM: () => ['ul', { class: 'task-list' }, 0],
   },
-
+  
   task_item: {
     attrs: { checked: { default: false } },
-    content: 'paragraph',
+    content: 'paragraph block*',
     parseDOM: [
       {
         tag: 'li',
