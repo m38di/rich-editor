@@ -129,6 +129,25 @@ function itemsOf(node: Node): MediaItem[] {
   return Array.isArray(items) ? (items as MediaItem[]) : []
 }
 
+function serializeListItem(item: Node, task = false): string {
+  let inner = ''
+
+  item.forEach((child) => {
+    if (child.type.name === 'paragraph') {
+      inner += renderInline(child)
+    } else {
+      inner += serializeBlock(child)
+    }
+  })
+
+  if (task) {
+    const checked = item.attrs.checked ? ' checked' : ''
+    return `<li><input type="checkbox"${checked}>${inner}</li>`
+  }
+
+  return `<li>${inner}</li>`
+}
+
 function serializeBlock(node: Node): string {
   switch (node.type.name) {
     case 'paragraph':
