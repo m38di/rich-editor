@@ -87,6 +87,11 @@ export function renderInline(parent: Node): string {
         case 'math_inline':
           out += `<tg-math>${escapeHtml(child.attrs.tex)}</tg-math>`
           break
+        case 'custom_emoji':
+          out += `<tg-emoji emoji-id="${escapeAttr(String(child.attrs.emojiId))}">${escapeHtml(
+            child.attrs.emoji,
+          )}</tg-emoji>`
+          break
         case 'time_inline':
           out += `<tg-time unix="${escapeAttr(String(child.attrs.unix))}" format="${escapeAttr(
             child.attrs.format,
