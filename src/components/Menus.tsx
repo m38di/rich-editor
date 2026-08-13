@@ -400,7 +400,6 @@ interface AttachSheetProps {
   run: (cmd: Command) => void
   close: () => void
   onOpenTableSize: () => void
-  onImportHtml: () => void
 }
 
 export function AttachSheet({ run, close, onOpenTableSize }: AttachSheetProps) {
@@ -414,12 +413,6 @@ export function AttachSheet({ run, close, onOpenTableSize }: AttachSheetProps) {
     { icon: 'details', bg: '#AF52DE', label: 'Toggle', onClick: () => run(insertDetails) },
     { icon: 'divider', bg: '#8E8E93', label: 'Divider', onClick: () => run(insertDivider) },
     { icon: 'math', bg: '#FF3B30', label: 'Math Block', onClick: () => run(insertMathBlock) },
-    {
-      icon: 'code',
-      bg: '#007AFF',
-      label: 'Import HTML',
-      onClick: onImportHtml,
-    },
   ]
   return (
     <Sheet onClose={close} title="Insert">
