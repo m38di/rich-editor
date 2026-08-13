@@ -699,6 +699,18 @@ li.ProseMirror-selectednode {
   list-style-type: disc;
 }
 
+.rich-editor ul[data-marker="disc"] {
+  list-style-type: disc;
+}
+
+.rich-editor ul[data-marker="circle"] {
+  list-style-type: circle;
+}
+
+.rich-editor ul[data-marker="square"] {
+  list-style-type: square;
+}
+
 .rich-editor ol {
   list-style-type: decimal;
 }
@@ -727,15 +739,6 @@ li.ProseMirror-selectednode {
 .rich-editor li {
   display: list-item;
   margin: 0.16em 0;
-}
-
-/* nested unordered lists */
-.rich-editor ul ul {
-  list-style-type: circle;
-}
-
-.rich-editor ul ul ul {
-  list-style-type: square;
 }
 
 /* Don't override an ordered list's explicit type here.
