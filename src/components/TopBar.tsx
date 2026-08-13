@@ -28,8 +28,13 @@ export function TopBar({ canUndo, canRedo, chars, onUndo, onRedo }: TopBarProps)
           {chars.toLocaleString()} characters · HTML export
         </div>
       </div>
-
       <div className="absolute right-1.5 flex items-center">
+        <button
+          type="button"
+          onClick={onImportHtml}
+        >
+          Import HTML
+        </button>
         <button
           type="button"
           onClick={onUndo}
