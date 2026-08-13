@@ -174,15 +174,16 @@ export default function App() {
           return
         }
   
-        const tr = view.state.tr.replaceWith(
-          0,
-          view.state.doc.content.size,
-          importedDoc.content,
+        view.dispatch(
+          view.state.tr.replaceWith(
+            0,
+            view.state.doc.content.size,
+            importedDoc.content,
+          ),
         )
   
-        view.dispatch(tr)
         view.focus()
-  
+        closeMenu()
         notify('HTML imported')
       } catch (error) {
         console.error('HTML import failed:', error)
@@ -191,7 +192,7 @@ export default function App() {
     }
   
     input.click()
-  }, [notify, viewRef])
+  }, [notify, viewRef, closeMenu])
   // ── Generate → Preview → Download ──────────────────────────────────────
   const onGenerate = useCallback(() => {
     const view = viewRef.current
@@ -266,7 +267,12 @@ export default function App() {
         />
       )}
       {openMenu === 'attach' && (
-        <AttachSheet run={run} close={closeMenu} onOpenTableSize={() => setDialog({ type: 'table' })} />
+        <AttachSheet
+          run={run}
+          close={closeMenu}
+          onOpenTableSize={() => setDialog({ type: 'table' })}
+          onImportHtml={handleImportHtml}
+        />
       )}
       {openMenu === 'emoji' && <EmojiPanel viewRef={viewRef} close={closeMenu} />}
 
