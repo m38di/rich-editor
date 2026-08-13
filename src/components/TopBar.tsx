@@ -31,12 +31,6 @@ export function TopBar({ canUndo, canRedo, chars, onUndo, onRedo }: TopBarProps)
       <div className="absolute right-1.5 flex items-center">
         <button
           type="button"
-          onClick={onImportHtml}
-        >
-          Import HTML
-        </button>
-        <button
-          type="button"
           onClick={onUndo}
           disabled={!canUndo}
           className="ios-icon-btn"
