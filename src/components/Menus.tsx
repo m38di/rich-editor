@@ -454,7 +454,7 @@ export function AttachSheet({ run, close, onOpenTableSize }: AttachSheetProps) {
   )
 }
 
-// ── emoji grid ──────────────────────────────────────────────────────────
+// ── emoji (custom emoji: emoji-id + fallback glyph) ─────────────────────
 
 export function EmojiPanel({
   viewRef,
@@ -463,25 +463,59 @@ export function EmojiPanel({
   viewRef: React.MutableRefObject<EditorView | null>
   close: () => void
 }) {
-  const insert = (emoji: string) => {
+  const [emojiId, setEmojiId] = useState('')
+  const [emoji, setEmoji] = useState('')
+
+  const apply = () => {
+    const id = emojiId.trim()
+    const em = emoji.trim()
+    if (!id || !em) return
     const view = viewRef.current
     if (!view) return
-    view.dispatch(view.state.tr.replaceSelectionWith(view.state.schema.text(emoji)))
+    view.dispatch(
+      view.state.tr
+        .replaceSelectionWith(view.state.schema.nodes.custom_emoji.create({ emojiId: id, emoji: em }))
+        .scrollIntoView(),
+    )
     view.focus()
+    close()
   }
+
   return (
-    <Sheet onClose={close} title="Emoji">
-      <div className="sheet-card grid grid-cols-8 gap-0.5 p-2">
-        {EMOJI_SET.map((e) => (
-          <button
-            key={e}
-            type="button"
-            onClick={() => insert(e)}
-            className="grid h-10 w-10 place-items-center rounded-[9px] text-[23px] transition active:scale-90 active:bg-ios-fill"
-          >
-            {e}
-          </button>
-        ))}
+    <Sheet onClose={close} title="Custom Emoji">
+      <div className="sheet-card px-3 py-2">
+        <div className="form-row">
+          <input
+            className="form-input left"
+            placeholder="Emoji ID"
+            value={emojiId}
+            autoFocus
+            onChange={(e) => setEmojiId(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && apply()}
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck={false}
+          />
+        </div>
+        <div className="form-row">
+          <input
+            className="form-input left"
+            placeholder="Emoji"
+            value={emoji}
+            onChange={(e) => setEmoji(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && apply()}
+          />
+        </div>
+      </div>
+      <div className="sheet-card">
+        <button
+          type="button"
+          className="sheet-row justify-center"
+          disabled={!emojiId.trim() || !emoji.trim()}
+          onClick={apply}
+        >
+          <span className="text-[16px] font-medium text-ios-blue">Insert</span>
+        </button>
       </div>
     </Sheet>
   )
