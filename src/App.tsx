@@ -107,10 +107,24 @@ export default function App() {
       })
     })
     const offToast = bus.on('toast', ({ text }) => notify(text))
+    const offOrderedList = bus.on(
+      'dialog:ordered-list',
+      ({ pos }) => {
+        const node = viewRef.current?.state.doc.nodeAt(pos)
+    
+        if (!node || node.type.name !== 'ordered_list') return
+    
+        setDialog({
+          type: 'ordered-list',
+          pos,
+        })
+      },
+    )
     return () => {
       offMap()
       offMath()
       offMediaUrl()
+      offOrderedList()
       offToast()
     }
   }, [viewRef, notify])
