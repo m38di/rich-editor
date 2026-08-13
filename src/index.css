@@ -799,8 +799,8 @@ li.ProseMirror-selectednode {
 }
 
 /* details / toggle */
-/* details / toggle */
 .re-details {
+  position: relative;
   margin: 0.75em 0;
   border: 0.5px solid var(--sep);
   border-radius: 10px;
@@ -808,65 +808,65 @@ li.ProseMirror-selectednode {
   padding: 2px 4px;
 }
 
-.re-details-body {
-  padding: 8px 12px;
+.re-details-arrow {
+  position: absolute;
+  left: 8px;
+  top: 9px;
+
+  width: 24px;
+  height: 24px;
+
+  border: none;
+  background: rgba(0, 122, 255, 0.12);
+  color: var(--blue);
+  border-radius: 7px;
+
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+
+  z-index: 2;
+
+  display: grid;
+  place-items: center;
+
+  transition:
+    transform 0.22s var(--spring),
+    background 0.15s ease;
 }
 
-/* Summary row */
-.re-details-body summary {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.re-details-arrow:active {
+  transform: scale(0.86);
+}
+
+.re-details-body {
+  padding: 8px 12px 8px 38px;
+}
+
+/* The summary is the first PM child */
+.re-details-body > summary {
+  display: block;
+
+  margin: 0.15em 0;
 
   font-weight: 600;
   font-size: 17px;
   letter-spacing: -0.2px;
 
-  list-style: none;
   cursor: text;
-  margin: 0.15em 0;
-  min-height: 28px;
-
-  user-select: none;
+  list-style: none;
 }
 
-/* Remove browser's native triangle */
-.re-details-body summary::-webkit-details-marker {
+.re-details-body > summary::-webkit-details-marker {
   display: none;
 }
 
-.re-details-body summary::marker {
-  content: '';
+.re-details-body > summary::marker {
+  display: none;
 }
 
-/* Custom chevron */
-.re-details-body summary::before {
-  content: '';
-  display: block;
-  flex: 0 0 7px;
-
-  width: 7px;
-  height: 7px;
-
-  border-right: 1.8px solid currentColor;
-  border-bottom: 1.8px solid currentColor;
-
-  transform: rotate(45deg);
-  transition: transform 0.2s var(--spring);
-}
-
-/* OPEN → ↑ */
-.re-details:not(.collapsed) .re-details-body summary::before {
-  transform: rotate(225deg);
-}
-
-/* CLOSED → ↓ */
-.re-details.collapsed .re-details-body summary::before {
-  transform: rotate(45deg);
-}
-
-/* Hide content while collapsed */
-.re-details.collapsed .re-details-body > *:not(summary) {
+/* Hide everything after summary when closed */
+.re-details.collapsed .re-details-body > :not(summary) {
   display: none;
 }
 
