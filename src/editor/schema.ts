@@ -168,21 +168,54 @@ const nodes: Record<string, NodeSpec> = {
   },
 
   ordered_list: {
-    attrs: { start: { default: 1 } },
+    attrs: {
+      start: { default: 1 },
+      type: { default: '1' },
+    },
+  
     content: 'list_item+',
     group: 'block',
+  
     parseDOM: [
       {
         tag: 'ol',
-        getAttrs: (el) => ({
-          start: (el as HTMLElement).hasAttribute('start')
-            ? Number((el as HTMLElement).getAttribute('start')) || 1
-            : 1,
-        }),
+        getAttrs: (el) => {
+          const dom = el as HTMLElement
+  
+          const startAttr = dom.getAttribute('start')
+          const typeAttr = dom.getAttribute('type')
+  
+          const type =
+            typeAttr === 'A' ||
+            typeAttr === 'a' ||
+            typeAttr === 'I' ||
+            typeAttr === 'i'
+              ? typeAttr
+              : '1'
+  
+          return {
+            start: startAttr ? Number(startAttr) || 1 : 1,
+            type,
+          }
+        },
       },
     ],
-    toDOM: (node) =>
-      node.attrs.start !== 1 ? ['ol', { start: node.attrs.start }, 0] : ['ol', 0],
+  
+    toDOM: (node) => {
+      const attrs: Record<string, string | number> = {}
+  
+      if (node.attrs.start !== 1) {
+        attrs.start = node.attrs.start
+      }
+  
+      if (node.attrs.type !== '1') {
+        attrs.type = node.attrs.type
+      }
+  
+      return Object.keys(attrs).length
+        ? ['ol', attrs, 0]
+        : ['ol', 0]
+    },
   },
 
   list_item: {
