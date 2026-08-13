@@ -245,7 +245,9 @@ const nodes: Record<string, NodeSpec> = {
       {
         tag: 'li',
         getAttrs: (el) => ({
-          checked: !!(el as HTMLElement).querySelector('input[type=checkbox]')?.getAttribute('checked'),
+          checked: !!(el as HTMLElement)
+            .querySelector('input[type=checkbox]')
+            ?.hasAttribute('checked'),
         }),
       },
     ],
