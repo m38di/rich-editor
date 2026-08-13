@@ -586,6 +586,8 @@ class AnchorChipView implements NodeView {
 class DetailsView implements NodeView {
   dom: HTMLElement
   contentDOM: HTMLElement
+
+  private arrow: HTMLButtonElement
   private node: Node
 
   constructor(
@@ -595,22 +597,18 @@ class DetailsView implements NodeView {
   ) {
     this.node = node
 
-    this.dom = el('details', 're-details')
+    this.dom = el('div', 're-details')
     this.contentDOM = el('div', 're-details-body')
 
-    this.dom.append(this.contentDOM)
+    this.arrow = el('button', 're-details-arrow re-stop') as HTMLButtonElement
+    this.arrow.type = 'button'
+    this.arrow.setAttribute('aria-label', 'Toggle details')
 
-    // The <summary> is created by ProseMirror inside contentDOM.
-    // We intercept its click so the ProseMirror `open` attribute
-    // remains the single source of truth.
-    this.dom.addEventListener('click', (event) => {
-      const target = event.target as HTMLElement
-      const summary = target.closest('summary')
+    this.dom.append(this.arrow, this.contentDOM)
 
-      if (!summary || !this.dom.contains(summary)) return
-
-      event.preventDefault()
-      event.stopPropagation()
+    this.arrow.onclick = (e) => {
+      e.preventDefault()
+      e.stopPropagation()
 
       const pos = this.getPos()
       if (pos === undefined) return
@@ -621,7 +619,7 @@ class DetailsView implements NodeView {
           open: !this.node.attrs.open,
         }),
       )
-    })
+    }
 
     this.sync()
   }
@@ -629,11 +627,7 @@ class DetailsView implements NodeView {
   private sync() {
     const open = !!this.node.attrs.open
 
-    if (open) {
-      this.dom.setAttribute('open', '')
-    } else {
-      this.dom.removeAttribute('open')
-    }
+    this.arrow.textContent = open ? '⌃' : '⌄'
 
     this.dom.classList.toggle('collapsed', !open)
   }
@@ -649,14 +643,7 @@ class DetailsView implements NodeView {
 
   ignoreMutation = ignoreMutationFactory(() => this.contentDOM)
 
-  stopEvent(event: Event): boolean {
-    const target = event.target as HTMLElement
-
-    // Summary clicks are handled by our own listener above.
-    if (target.closest?.('summary')) return true
-
-    return stopEventOnInputs(event)
-  }
+  stopEvent = stopEventOnInputs
 }
 // ── quote + author (RichQuoteAuthorCell) ────────────────────────────────
 
