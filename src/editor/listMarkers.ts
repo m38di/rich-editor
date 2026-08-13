@@ -1,6 +1,6 @@
 const BULLET_STYLES = ['disc', 'circle', 'square'] as const
 
-export function updateBulletMarkers(root: HTMLElement) {
+export function updateBulletMarkers(root: HTMLElement): void {
   root.querySelectorAll<HTMLUListElement>('ul').forEach((ul) => {
     let depth = 0
     let parent = ul.parentElement
@@ -9,9 +9,10 @@ export function updateBulletMarkers(root: HTMLElement) {
       if (parent.tagName === 'UL') {
         depth++
       }
+
       parent = parent.parentElement
     }
 
-    ul.dataset.marker = BULLET_STYLES[depth % BULLET_STYLES.length]
+    ul.style.listStyleType = BULLET_STYLES[depth % BULLET_STYLES.length]
   })
 }
