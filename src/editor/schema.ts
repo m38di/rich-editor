@@ -377,7 +377,30 @@ const nodes: Record<string, NodeSpec> = {
     parseDOM: [{ tag: 'tg-math', getAttrs: (el) => ({ tex: (el as HTMLElement).textContent || '' }) }],
     toDOM: (node) => ['tg-math', node.attrs.tex],
   },
-
+  // Android custom emoji entity (TLRPC.TL_messageEntityCustomEmoji):
+  // document_id (emoji-id) + a fallback unicode emoji for text-only clients.
+  custom_emoji: {
+    attrs: {
+      emojiId: { default: '' },
+      emoji: { default: '' },
+    },
+    inline: true,
+    group: 'inline',
+    atom: true,
+    parseDOM: [
+      {
+        tag: 'tg-emoji',
+        getAttrs: (el) => {
+          const dom = el as HTMLElement
+          return {
+            emojiId: dom.getAttribute('emoji-id') || '',
+            emoji: dom.textContent || '',
+          }
+        },
+      },
+    ],
+    toDOM: (node) => ['tg-emoji', { 'emoji-id': node.attrs.emojiId }, node.attrs.emoji],
+  },
   // Android FormattedDate entity: stored unix + format, rendered as text.
   time_inline: {
     attrs: {
