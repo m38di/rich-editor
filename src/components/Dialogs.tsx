@@ -11,6 +11,7 @@ import katex from 'katex'
 import { N } from '../editor/schema'
 import { setLink, removeLink, insertAnchor, insertTime, insertCustomEmoji, collectAnchors } from '../editor/commands'
 import { mergeCells, setTableCaption, insertTableCmd, Rect } from '../editor/tableCommands'
+import { OrderedListType, setOrderedListAttrs } from '../editor/commands'
 import { TIME_FORMATS, formatTime } from '../lib/util'
 import { Minus, Plus } from './icons'
 import { Iv } from './ivIcons'
@@ -153,6 +154,106 @@ export function EmojiDialog({
         </p>
       </div>
     </SheetDialog>
+  )
+}
+
+//
+
+interface OrderedListDialogProps {
+  viewRef: React.MutableRefObject<EditorView | null>
+  pos: number
+  onClose: () => void
+}
+
+export function OrderedListDialog({
+  viewRef,
+  pos,
+  onClose,
+}: OrderedListDialogProps) {
+  const node = viewRef.current?.state.doc.nodeAt(pos)
+
+  const [type, setType] = useState<OrderedListType>(
+    node?.attrs.type ?? '1',
+  )
+
+  const [start, setStart] = useState(
+    String(node?.attrs.start ?? 1),
+  )
+
+  const apply = () => {
+    const view = viewRef.current
+
+    if (!view) return
+
+    const value = Math.max(
+      1,
+      Number.parseInt(start, 10) || 1,
+    )
+
+    setOrderedListAttrs(pos, value, type)(
+      view.state,
+      (tr) => view.dispatch(tr),
+    )
+
+    view.focus()
+    onClose()
+  }
+
+  return (
+    <Sheet onClose={onClose} title="Ordered List">
+      <div className="sheet-card">
+        <div className="px-4 py-3">
+          <div className="mb-2 text-[13px] font-semibold text-ios-secondary">
+            Type
+          </div>
+
+          <div className="grid grid-cols-5 gap-1.5">
+            {(['1', 'A', 'a', 'I', 'i'] as OrderedListType[]).map((value) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setType(value)}
+                className={[
+                  'grid h-10 place-items-center rounded-[9px]',
+                  'text-[15px] font-semibold transition',
+                  type === value
+                    ? 'bg-ios-blue text-white'
+                    : 'bg-ios-fill text-ios-label',
+                ].join(' ')}
+              >
+                {value}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="sheet-card">
+        <label className="block px-4 py-3">
+          <span className="mb-1.5 block text-[13px] font-semibold text-ios-secondary">
+            Start
+          </span>
+
+          <input
+            type="number"
+            min={1}
+            value={start}
+            onChange={(e) => setStart(e.target.value)}
+            className="w-full rounded-[10px] bg-ios-fill px-3 py-2.5 text-[16px] text-ios-label outline-none"
+          />
+        </label>
+      </div>
+
+      <div className="sheet-card">
+        <button
+          type="button"
+          onClick={apply}
+          className="w-full px-4 py-3 text-[16px] font-semibold text-ios-blue"
+        >
+          Done
+        </button>
+      </div>
+    </Sheet>
   )
 }
 
