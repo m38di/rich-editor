@@ -704,23 +704,23 @@ li.ProseMirror-selectednode {
 }
 
 /* ordered-list type */
-.rich-editor ol[type="1"] {
+.rich-editor ol[data-list-type="1"] {
   list-style-type: decimal;
 }
 
-.rich-editor ol[type="A"] {
+.rich-editor ol[data-list-type="A"] {
   list-style-type: upper-alpha;
 }
 
-.rich-editor ol[type="a"] {
+.rich-editor ol[data-list-type="a"] {
   list-style-type: lower-alpha;
 }
 
-.rich-editor ol[type="I"] {
+.rich-editor ol[data-list-type="I"] {
   list-style-type: upper-roman;
 }
 
-.rich-editor ol[type="i"] {
+.rich-editor ol[data-list-type="i"] {
   list-style-type: lower-roman;
 }
 
