@@ -147,6 +147,30 @@ export default function App() {
     [slash, run, viewRef],
   )
 
+  // --
+  const importHtml = useCallback(() => {
+    const input = document.createElement('input')
+  
+    input.type = 'file'
+    input.accept = '.html,.htm,text/html'
+  
+    input.onchange = async () => {
+      const file = input.files?.[0]
+      if (!file) return
+  
+      if (file.size > 5 * 1024 * 1024) {
+        notify('HTML file is larger than 5 MB')
+        return
+      }
+  
+      const html = await file.text()
+  
+      // We will connect this to ProseMirror next.
+      console.log(html)
+    }
+  
+    input.click()
+  }, [notify])
   // ── Generate → Preview → Download ──────────────────────────────────────
   const onGenerate = useCallback(() => {
     const view = viewRef.current
