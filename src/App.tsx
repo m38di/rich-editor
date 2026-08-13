@@ -30,7 +30,6 @@ import {
 import { PreviewSheet } from './components/PreviewSheet'
 import { bus } from './editor/bus'
 import { serializeRichHtml } from './editor/serializer'
-import { importHtml } from './editor/importer'
 import { buildStandaloneHtml, docTitle } from './editor/exportHtml'
 import { SlashDef } from './lib/util'
 import {
@@ -147,52 +146,7 @@ export default function App() {
     },
     [slash, run, viewRef],
   )
-
-  // --
-  const handleImportHtml = useCallback(() => {
-    const input = document.createElement('input')
   
-    input.type = 'file'
-    input.accept = '.html,.htm,text/html'
-  
-    input.onchange = async () => {
-      const file = input.files?.[0]
-      if (!file) return
-  
-      if (file.size > 5 * 1024 * 1024) {
-        notify('HTML file is larger than 5 MB')
-        return
-      }
-  
-      try {
-        const html = await file.text()
-        const importedDoc = importHtml(html)
-  
-        const view = viewRef.current
-        if (!view) {
-          notify('Editor is not ready')
-          return
-        }
-  
-        view.dispatch(
-          view.state.tr.replaceWith(
-            0,
-            view.state.doc.content.size,
-            importedDoc.content,
-          ),
-        )
-  
-        view.focus()
-        closeMenu()
-        notify('HTML imported')
-      } catch (error) {
-        console.error('HTML import failed:', error)
-        notify('Could not import HTML')
-      }
-    }
-  
-    input.click()
-  }, [notify, viewRef, closeMenu])
   // ── Generate → Preview → Download ──────────────────────────────────────
   const onGenerate = useCallback(() => {
     const view = viewRef.current
@@ -271,7 +225,6 @@ export default function App() {
           run={run}
           close={closeMenu}
           onOpenTableSize={() => setDialog({ type: 'table' })}
-          onImportHtml={handleImportHtml}
         />
       )}
       {openMenu === 'emoji' && <EmojiPanel viewRef={viewRef} close={closeMenu} />}
