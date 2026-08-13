@@ -26,6 +26,7 @@ import {
   TableSizeDialog,
   MergeDialog,
   CaptionDialog,
+  OrderedListDialog,
 } from './components/Dialogs'
 import { PreviewSheet } from './components/PreviewSheet'
 import { bus } from './editor/bus'
@@ -49,6 +50,7 @@ type DialogState =
   | { type: 'math'; pos: number | null; inline: boolean; tex: string }
   | { type: 'map'; pos: number | null; lat: number; long: number; zoom: number }
   | { type: 'media-url'; pos: number }
+  | { type: 'ordered-list'; pos: number }
   | { type: 'table' }
   | { type: 'merge' }
   | { type: 'caption' }
