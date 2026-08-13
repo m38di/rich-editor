@@ -203,15 +203,16 @@ const nodes: Record<string, NodeSpec> = {
   
     toDOM: (node) => {
       const attrs: Record<string, string | number> = {}
-  
+    
       if (node.attrs.start !== 1) {
         attrs.start = node.attrs.start
       }
-  
+    
       if (node.attrs.type !== '1') {
         attrs.type = node.attrs.type
+        attrs['data-list-type'] = node.attrs.type
       }
-  
+    
       return Object.keys(attrs).length
         ? ['ol', attrs, 0]
         : ['ol', 0]
