@@ -351,9 +351,16 @@ class MediaGroupView implements NodeView {
       loadB.type = 'button'
       loadB.title = 'Load'
       loadB.onclick = () => {
-        const next = this.items()
-        next[i] = { ...next[i], src: next[i].dataset.mediaSrc }
-        this.setItems(next)
+        const src = media.dataset.mediaSrc
+        if (!src) return
+      
+        if (media instanceof HTMLImageElement) {
+          media.src = src
+        } else if (media instanceof HTMLAudioElement) {
+          media.src = src
+        } else if (media instanceof HTMLVideoElement) {
+          media.src = src
+        }
       }
       const sp = el('button', 're-media-btn re-tool', item.spoiler ? '👁' : '🙈')
       sp.type = 'button'
