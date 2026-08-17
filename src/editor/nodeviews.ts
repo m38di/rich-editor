@@ -366,7 +366,7 @@ class MediaGroupView implements NodeView {
       const rm = el('button', 're-media-btn re-tool danger', '✕')
       rm.type = 'button'
       rm.onclick = () => this.setItems(this.items().filter((_, j) => j !== i))
-      tools.append(sp, rm)
+      tools.append(loadB, sp, rm)
       tile.append(media, tools)
       this.grid.append(tile)
     })
