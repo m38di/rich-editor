@@ -330,20 +330,31 @@ class MediaGroupView implements NodeView {
       let media: HTMLElement
       if (item.kind === 'audio') {
         media = document.createElement('audio')
-        ;(media as HTMLAudioElement).src = item.src
+        ;(media as HTMLAudioElement).dataset.mediaSrc = item.src
+        ;(media as HTMLAudioElement).title = "Not loaded"
         ;(media as HTMLAudioElement).controls = true
       } else if (item.kind === 'image') {
         media = document.createElement('img')
-        ;(media as HTMLImageElement).src = item.src
+        ;(media as HTMLImageElement).dataset.mediaSrc = item.src
+        ;(media as HTMLVideoElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='220'%3E%3Crect width='100%25' height='100%25' fill='%23eeeeee'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dominant-baseline='middle' fill='%23777777'%3ENot loaded%3C/text%3E%3C/svg%3E"
       } else {
         media = document.createElement('video')
-        ;(media as HTMLVideoElement).src = item.src
+        ;(media as HTMLVideoElement).dataset.mediaSrc = item.src
+        ;(media as HTMLVideoElement).poster = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='220'%3E%3Crect width='100%25' height='100%25' fill='%23eeeeee'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dominant-baseline='middle' fill='%23777777'%3ENot loaded%3C/text%3E%3C/svg%3E"
         ;(media as HTMLVideoElement).controls = mode === 'collage' ? false : true
         if (item.kind === 'animation') {
           (media as HTMLVideoElement).loop = true
         }
       }
       const tools = el('div', 're-tile-tools re-stop')
+      const loadB = el('button', 're-media-btn re-tool', 'L')
+      loadB.type = 'button'
+      loadB.title = 'Load'
+      loadB.onclick = () => {
+        const next = this.items()
+        next[i] = { ...next[i], src: next[i].dataset.mediaSrc }
+        this.setItems(next)
+      }
       const sp = el('button', 're-media-btn re-tool', item.spoiler ? '👁' : '🙈')
       sp.type = 'button'
       sp.title = 'Toggle spoiler'
