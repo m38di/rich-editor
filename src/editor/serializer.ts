@@ -107,7 +107,7 @@ export function renderInline(parent: Node): string {
 }
 
 function mediaTag(item: MediaItem): string {
-  const src = escapeAttr(item.dataset.mediaSrc)
+  const src = escapeAttr(item.src)
   const sp = item.spoiler ? ' tg-spoiler' : ''
   if (item.kind === 'image') return `<img src="${src}"${sp}/>`
   if (item.kind === 'audio') return `<audio src="${src}"></audio>`
