@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { undo, redo } from 'prosemirror-history'
 import { useEditorBridge } from './hooks/useEditorBridge'
+import { useKeyboardViewport } from './hooks/useKeyboardViewport.ts'
 import { TopBar } from './components/TopBar'
 import { BottomPanel, MenuId } from './components/BottomPanel'
 import { FormattingPanel } from './components/FormattingPanel'
@@ -68,6 +69,7 @@ export default function App() {
   const [preview, setPreview] = useState<PreviewState | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [slashMuted, setSlashMuted] = useState(false)
+  const {keyboardHeight, keyboardOpen} = useKeyboardViewport()
   const toastTimer = useRef<number | null>(null)
 
   const notify = useCallback((text: string) => {
