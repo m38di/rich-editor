@@ -673,13 +673,14 @@ li.ProseMirror-selectednode {
   position: relative;
   margin: 0.5em 0;
 }
+
 .rich-editor hr::after {
   content: '';
   position: absolute;
-  left: 0;
-  right: 0;
-  top: 9px;
-  border-top: 0.5px solid rgba(60, 60, 67, 0.28);
+  left: 15%;
+  right: 15%;
+  top: 8px;
+  border-top: 2px solid rgba(60, 60, 67, 0.35);
 }
 
 /* footer */
