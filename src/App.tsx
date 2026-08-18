@@ -205,7 +205,7 @@ export default function App() {
       </main>
 
       {/* compose bar + floating format strip */}
-      <BottomPanel info={selection} openMenu={openMenu} onToggleMenu={toggleMenu} onGenerate={onGenerate}>
+      <BottomPanel info={selection} openMenu={openMenu} onToggleMenu={toggleMenu} onGenerate={onGenerate} keyboardHeight={keyboardHeight}>
         {showFormatting && (
           <FormattingPanel
             info={selection}
