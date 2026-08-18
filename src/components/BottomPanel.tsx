@@ -14,11 +14,12 @@ interface BottomPanelProps {
   openMenu: MenuId | null
   onToggleMenu: (id: MenuId) => void
   onGenerate: () => void
+  keyboardHeight: number
   /** menus + formatting strip render here, floating above the bar */
   children?: React.ReactNode
 }
 
-export function BottomPanel({ info, openMenu, onToggleMenu, onGenerate, children }: BottomPanelProps) {
+export function BottomPanel({ info, openMenu, onToggleMenu, onGenerate, keyboardHeight, children }: BottomPanelProps) {
   const item = (id: MenuId, label: string, glyph: React.ReactNode) => (
     <button
       key={id}
@@ -34,7 +35,7 @@ export function BottomPanel({ info, openMenu, onToggleMenu, onGenerate, children
   )
 
   return (
-    <div className="ios-toolbar ios-vibrancy">
+    <div className="ios-toolbar ios-vibrancy" style={{ bottom: keyboardHeight }}>
       {/* floating slot above the bar */}
       <div className="pointer-events-none absolute inset-x-0 bottom-full z-20 flex flex-col items-center gap-2 px-3 pb-2">
         {children}
