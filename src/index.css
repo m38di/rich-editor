@@ -669,7 +669,7 @@ li.ProseMirror-selectednode {
 /* divider — hairline */
 .rich-editor hr {
   border: none;
-  height: 18px;
+  height: 25px;
   position: relative;
   margin: 0.5em 0;
 }
@@ -677,8 +677,8 @@ li.ProseMirror-selectednode {
 .rich-editor hr::after {
   content: '';
   position: absolute;
-  left: 15%;
-  right: 15%;
+  left: 20%;
+  right: 20%;
   top: 8px;
   border-top: 2px solid rgba(60, 60, 67, 0.35);
 }
