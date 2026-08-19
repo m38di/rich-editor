@@ -311,7 +311,6 @@ export function MediaUrlDialog({
       <div className="px-2 pb-2">
         <div className="ios-form">
           <div className="form-row flex items-center gap-2">
-
             <input
               className="form-input left flex-1"
               type="url"
@@ -319,34 +318,28 @@ export function MediaUrlDialog({
               autoFocus
               placeholder="https://example.com/image.jpg"
               onChange={(e) => onUrlChange(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  checkUrl()
-                }
-              }}
               autoCapitalize="off"
               autoCorrect="off"
               spellCheck={false}
             />
-
+          
             <button
               type="button"
-              disabled={!url.trim()}
+              disabled={!url.trim() || checking}
               onClick={checkUrl}
               className="
+                shrink-0
                 rounded-[10px]
-                bg-ios-blue
                 px-3
                 py-2
                 text-[15px]
                 font-semibold
-                text-white
+                text-ios-blue
                 disabled:opacity-40
               "
             >
-              Check
+              {checking ? '...' : 'Check'}
             </button>
-
           </div>
         </div>
 
