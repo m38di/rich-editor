@@ -282,37 +282,28 @@ export default function App() {
       {dialog?.type === 'media-url' && (
         <MediaUrlDialog
           onClose={() => setDialog(null)}
-          onAdd={(url) => {
+          onAdd={({ url, kind }) => {
             const view = viewRef.current
             if (!view) return
-      
+          
             const node = view.state.doc.nodeAt(dialog.pos)
             if (!node) return
-      
+          
             const items = Array.isArray(node.attrs.items)
               ? [...node.attrs.items]
               : []
-      
-            if (items.length >= 10) {
+          
+            if (items.length >= 50) {
               notify('Maximum 10 media items')
               return
             }
-      
-            const kind =
-              /\.(gif)$/i.test(url)
-                ? 'animation'
-                : /\.(mp4|webm|mov|m4v)$/i.test(url)
-                  ? 'video'
-                  : /\.(mp3|wav|ogg|m4a|aac|flac)$/i.test(url)
-                    ? 'audio'
-                    : 'image'
-      
+          
             items.push({
               kind,
               src: url,
               spoiler: false,
             })
-      
+          
             view.dispatch(
               view.state.tr.setNodeMarkup(
                 dialog.pos,
