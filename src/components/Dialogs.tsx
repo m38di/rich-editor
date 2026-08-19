@@ -325,7 +325,7 @@ export function MediaUrlDialog({
           
             <button
               type="button"
-              disabled={!url.trim() || checking}
+              disabled={!url.trim()}
               onClick={checkUrl}
               className="
                 shrink-0
@@ -338,7 +338,7 @@ export function MediaUrlDialog({
                 disabled:opacity-40
               "
             >
-              'Check'
+              Check
             </button>
           </div>
         </div>
