@@ -300,23 +300,6 @@ export function MediaUrlDialog({
     setChecked(false)
   }
 
-  const checkUrl = async () => {
-    const value = url.trim()
-  
-    if (!value) return
-  
-    console.log('checking:', value)
-  
-    // sample result
-    const result = {
-      kind: 'image' as 'image' | 'video' | 'audio',
-      size: 245678,
-      type: 'image/jpeg',
-    }
-  
-    return result
-  }
-
   return (
     <SheetDialog
       title="Add Media"
