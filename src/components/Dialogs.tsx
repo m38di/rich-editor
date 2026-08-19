@@ -276,18 +276,85 @@ export function MediaUrlDialog({
   }) => void
 }) {
   const [url, setUrl] = useState('')
-  const [kind, setKind] = useState<'image' | 'video' | 'audio' | null>(null)
   const [checked, setChecked] = useState(false)
+  const [checking, setChecking] = useState(false)
+  const [kind, setKind] = useState<'image' | 'video' | 'audio' | null>(null)
 
-  const checkUrl = () => {
+  const checkUrl = async () => {
     const value = url.trim()
     if (!value) return
   
-    // Replace this later with real detection.
-    const detectedKind: 'image' | 'video' | 'audio' | null = null
+    setChecking(true)
+    setChecked(false)
+    setKind(null)
   
-    setKind(detectedKind)
-    setChecked(true)
+    try {
+      let contentType = ''
+  
+      // 1. Try HEAD first
+      try {
+        const response = await fetch(value, {
+          method: 'HEAD',
+        })
+  
+        contentType =
+          response.headers.get('content-type')?.toLowerCase() ?? ''
+      } catch (error) {
+        console.warn('HEAD request failed:', error)
+      }
+  
+      // 2. If HEAD didn't tell us the type, try a tiny Range request
+      if (!contentType || ['application/octet-stream', 'binary/octet-stream'].includes(contentType)) {
+        try {
+          const controller = new AbortController()
+  
+          const response = await fetch(value, {
+            method: 'GET',
+            headers: {
+              Range: 'bytes=0-31',
+            },
+            signal: controller.signal,
+          })
+  
+          contentType =
+            response.headers.get('content-type')?.toLowerCase() ?? ''
+  
+          // We only needed the headers.
+          controller.abort()
+        } catch (error) {
+          // AbortError is expected because we're intentionally
+          // stopping the range request.
+          if (error instanceof DOMException && error.name === 'AbortError') {
+            // expected
+          } else {
+            console.warn('Range request failed:', error)
+          }
+        }
+      }
+  
+      let detectedKind: 'image' | 'video' | 'audio' | null = null
+  
+      if (contentType.startsWith('image/')) {
+        detectedKind = 'image'
+      } else if (contentType.startsWith('video/')) {
+        detectedKind = 'video'
+      } else if (contentType.startsWith('audio/')) {
+        detectedKind = 'audio'
+      }
+  
+      console.log('Media Content-Type:', contentType)
+      console.log('Detected kind:', detectedKind)
+  
+      setKind(detectedKind)
+      setChecked(true)
+    } catch (error) {
+      console.error('Media check failed:', error)
+  
+      setKind(null)
+      setChecked(true)
+    } finally {
+      setChecking(false)
+    }
   }
 
   const apply = () => {
@@ -334,7 +401,7 @@ export function MediaUrlDialog({
           
             <button
               type="button"
-              disabled={!url.trim()}
+              disabled={!url.trim() || checking}
               onClick={checkUrl}
               className="
                 shrink-0
@@ -347,7 +414,7 @@ export function MediaUrlDialog({
                 disabled:opacity-40
               "
             >
-              Check
+              {checking ? 'Checking...' : 'Check'}
             </button>
           </div>
         </div>
