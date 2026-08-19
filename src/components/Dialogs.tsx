@@ -338,7 +338,7 @@ export function MediaUrlDialog({
                 disabled:opacity-40
               "
             >
-              {checking ? '...' : 'Check'}
+              'Check'
             </button>
           </div>
         </div>
