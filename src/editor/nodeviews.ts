@@ -83,102 +83,106 @@ class MediaFigureView implements NodeView {
   }
 
   private async pickFile() {
-    const input = document.createElement('input')
+    const pos = this.getPos()
+    if (pos === undefined) return
 
-    input.type = 'file'
+    bus.emit('dialog:media-url', { pos })
+  //   const input = document.createElement('input')
 
-    input.accept =
-      this.node.attrs.kind === 'audio'
-        ? 'audio/*'
-        : this.node.attrs.kind === 'image'
-          ? 'image/*'
-          : 'video/*'
+  //   input.type = 'file'
 
-    input.onchange = async () => {
-      const file = input.files?.[0]
-      if (!file) return
+  //   input.accept =
+  //     this.node.attrs.kind === 'audio'
+  //       ? 'audio/*'
+  //       : this.node.attrs.kind === 'image'
+  //         ? 'image/*'
+  //         : 'video/*'
 
-      // Local preview URL (optional)
-      const localSrc = URL.createObjectURL(file)
+  //   input.onchange = async () => {
+  //     const file = input.files?.[0]
+  //     if (!file) return
 
-      const kind =
-        file.type.startsWith('audio/')
-          ? 'audio'
-          : file.type.startsWith('video/')
-            ? file.name.toLowerCase().endsWith('.gif')
-              ? 'animation'
-              : 'video'
-            : 'image'
+  //     // Local preview URL (optional)
+  //     const localSrc = URL.createObjectURL(file)
 
-      // Show the selected file immediately
-      this.setAttrs({
-        src: localSrc,
-        kind,
-        uploading: true
-      })
+  //     const kind =
+  //       file.type.startsWith('audio/')
+  //         ? 'audio'
+  //         : file.type.startsWith('video/')
+  //           ? file.name.toLowerCase().endsWith('.gif')
+  //             ? 'animation'
+  //             : 'video'
+  //           : 'image'
 
-      try {
-        const form = new FormData()
+  //     // Show the selected file immediately
+  //     this.setAttrs({
+  //       src: localSrc,
+  //       kind,
+  //       uploading: true
+  //     })
 
-        form.append('file', file, file.name)
+  //     try {
+  //       const form = new FormData()
 
-        const response = await fetch(
-          'https://quiet-art-1fb1.mehdimirzaei4188580.workers.dev/upload',
-          {
-            method: 'POST',
-            body: form
-          }
-        )
+  //       form.append('file', file, file.name)
 
-        const rawText = await response.text()
+  //       const response = await fetch(
+  //         'https://quiet-art-1fb1.mehdimirzaei4188580.workers.dev/upload',
+  //         {
+  //           method: 'POST',
+  //           body: form
+  //         }
+  //       )
 
-        console.log('Upload status:', response.status)
-        console.log('Upload response:', rawText)
+  //       const rawText = await response.text()
 
-        let result: any
+  //       console.log('Upload status:', response.status)
+  //       console.log('Upload response:', rawText)
 
-        try {
-          result = JSON.parse(rawText)
-        } catch {
-          throw new Error(
-            `Worker returned invalid JSON: ${rawText}`
-          )
-        }
+  //       let result: any
 
-        if (!response.ok) {
-          throw new Error(
-            result.error ||
-            result.message ||
-            `Worker returned HTTP ${response.status}`
-          )
-        }
+  //       try {
+  //         result = JSON.parse(rawText)
+  //       } catch {
+  //         throw new Error(
+  //           `Worker returned invalid JSON: ${rawText}`
+  //         )
+  //       }
 
-        console.log('Parsed result:', result)
+  //       if (!response.ok) {
+  //         throw new Error(
+  //           result.error ||
+  //           result.message ||
+  //           `Worker returned HTTP ${response.status}`
+  //         )
+  //       }
 
-        const uploadedUrl =
-          result.url ||
-          result.image?.url ||
-          result.data?.url
+  //       console.log('Parsed result:', result)
 
-        if (!uploadedUrl) {
-          console.error('No URL found in:', result)
+  //       const uploadedUrl =
+  //         result.url ||
+  //         result.image?.url ||
+  //         result.data?.url
 
-          throw new Error(
-            result.error ||
-            result.message ||
-            'Upload succeeded but no image URL was returned'
-          )
-        }
+  //       if (!uploadedUrl) {
+  //         console.error('No URL found in:', result)
 
-        this.setAttrs({
-          src: uploadedUrl,
-          kind,
-          uploading: false
-        })
-      } catch (e) {}
-    }
+  //         throw new Error(
+  //           result.error ||
+  //           result.message ||
+  //           'Upload succeeded but no image URL was returned'
+  //         )
+  //       }
 
-    input.click()
+  //       this.setAttrs({
+  //         src: uploadedUrl,
+  //         kind,
+  //         uploading: false
+  //       })
+  //     } catch (e) {}
+  //   }
+
+  //   input.click()
   }
 
   private render() {
@@ -329,10 +333,11 @@ class MediaGroupView implements NodeView {
       if (item.spoiler) tile.classList.add('spoilered')
       let media: HTMLElement
       if (item.kind === 'audio') {
-        media = document.createElement('audio')
-        ;(media as HTMLAudioElement).dataset.mediaSrc = item.src
-        ;(media as HTMLAudioElement).title = "Not loaded"
-        ;(media as HTMLAudioElement).controls = true
+        // media = document.createElement('audio')
+        // ;(media as HTMLAudioElement).dataset.mediaSrc = item.src
+        // ;(media as HTMLAudioElement).title = "Not loaded"
+        // ;(media as HTMLAudioElement).controls = true
+        return
       } else if (item.kind === 'image') {
         media = document.createElement('img')
         ;(media as HTMLImageElement).dataset.mediaSrc = item.src
@@ -387,22 +392,22 @@ class MediaGroupView implements NodeView {
     }
 
     // mode toggle — Android shows it from 2 items, 320ms transition
-    if (items.length >= 2) {
-      const toggle = el('div', 're-gallery-mode re-stop')
-      for (const m of ['collage', 'slideshow']) {
-        const b = el('button', m === mode ? 'on' : '', m === 'collage' ? 'Collage' : 'Slideshow')
-        b.type = 'button'
-        b.onclick = () => {
-          const pos = this.getPos()
-          if (pos === undefined) return
-          this.view.dispatch(
-            this.view.state.tr.setNodeMarkup(pos, undefined, { ...this.node.attrs, mode: m }),
-          )
-        }
-        toggle.append(b)
-      }
-      this.grid.append(toggle)
-    }
+    // if (items.length >= 2) {
+    //   const toggle = el('div', 're-gallery-mode re-stop')
+    //   for (const m of ['collage', 'slideshow']) {
+    //     const b = el('button', m === mode ? 'on' : '', m === 'collage' ? 'Collage' : 'Slideshow')
+    //     b.type = 'button'
+    //     b.onclick = () => {
+    //       const pos = this.getPos()
+    //       if (pos === undefined) return
+    //       this.view.dispatch(
+    //         this.view.state.tr.setNodeMarkup(pos, undefined, { ...this.node.attrs, mode: m }),
+    //       )
+    //     }
+    //     toggle.append(b)
+    //   }
+    //   this.grid.append(toggle)
+    // }
   }
 
   update(node: Node): boolean {
