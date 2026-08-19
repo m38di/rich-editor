@@ -270,34 +270,43 @@ export function MediaUrlDialog({
   onAdd,
 }: {
   onClose: () => void
-  onAdd: (url: string) => void
+  onAdd: (media: {
+    url: string
+    kind: 'image' | 'video' | 'audio'
+  }) => void
 }) {
   const [url, setUrl] = useState('')
+  const [kind, setKind] = useState<'image' | 'video' | 'audio' | null>(null)
   const [checked, setChecked] = useState(false)
 
   const checkUrl = () => {
     const value = url.trim()
     if (!value) return
-
-    // later: real HEAD/range detection here
-    console.log('checking:', value)
-
+  
+    // Replace this later with real detection.
+    const detectedKind: 'image' | 'video' | 'audio' | null = null
+  
+    setKind(detectedKind)
     setChecked(true)
   }
 
   const apply = () => {
     const value = url.trim()
-    if (!value || !checked) return
-
-    onAdd(value)
+  
+    if (!value || !checked || !kind) return
+  
+    onAdd({
+      url: value,
+      kind,
+    })
+  
     onClose()
   }
 
   const onUrlChange = (value: string) => {
     setUrl(value)
-
-    // URL changed -> require checking again
     setChecked(false)
+    setKind(null)
   }
 
   return (
@@ -306,7 +315,7 @@ export function MediaUrlDialog({
       onClose={onClose}
       onDone={apply}
       doneLabel="Add"
-      doneDisabled={!checked}
+      doneDisabled={!checked || !kind}
     >
       <div className="px-2 pb-2">
         <div className="ios-form">
@@ -346,6 +355,32 @@ export function MediaUrlDialog({
         <p className="form-hint">
           Check the URL before adding media.
         </p>
+        {checked && kind === null && (
+          <div className="mt-3 px-2">
+            <div className="mb-2 text-[13px] font-semibold text-ios-secondary">
+              Select media type
+            </div>
+        
+            <div className="grid grid-cols-3 gap-1.5">
+              {(['image', 'video', 'audio'] as const).map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setKind(value)}
+                  className={[
+                    'grid h-10 place-items-center rounded-[9px]',
+                    'text-[15px] font-semibold transition',
+                    kind === value
+                      ? 'bg-ios-blue text-white'
+                      : 'bg-ios-fill text-ios-label',
+                  ].join(' ')}
+                >
+                  {value[0].toUpperCase() + value.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </SheetDialog>
   )
