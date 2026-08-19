@@ -273,13 +273,48 @@ export function MediaUrlDialog({
   onAdd: (url: string) => void
 }) {
   const [url, setUrl] = useState('')
+  const [checked, setChecked] = useState(false)
 
-  const apply = () => {
+  const checkUrl = () => {
     const value = url.trim()
     if (!value) return
 
+    // later: real HEAD/range detection here
+    console.log('checking:', value)
+
+    setChecked(true)
+  }
+
+  const apply = () => {
+    const value = url.trim()
+    if (!value || !checked) return
+
     onAdd(value)
     onClose()
+  }
+
+  const onUrlChange = (value: string) => {
+    setUrl(value)
+
+    // URL changed -> require checking again
+    setChecked(false)
+  }
+
+  const checkUrl = async () => {
+    const value = url.trim()
+  
+    if (!value) return
+  
+    console.log('checking:', value)
+  
+    // sample result
+    const result = {
+      kind: 'image' as 'image' | 'video' | 'audio',
+      size: 245678,
+      type: 'image/jpeg',
+    }
+  
+    return result
   }
 
   return (
@@ -288,30 +323,52 @@ export function MediaUrlDialog({
       onClose={onClose}
       onDone={apply}
       doneLabel="Add"
-      doneDisabled={!url.trim()}
+      doneDisabled={!checked}
     >
       <div className="px-2 pb-2">
         <div className="ios-form">
-          <div className="form-row">
+          <div className="form-row flex items-center gap-2">
+
             <input
-              className="form-input left"
+              className="form-input left flex-1"
               type="url"
               value={url}
               autoFocus
               placeholder="https://example.com/image.jpg"
-              onChange={(e) => setUrl(e.target.value)}
+              onChange={(e) => onUrlChange(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') apply()
+                if (e.key === 'Enter') {
+                  checkUrl()
+                }
               }}
               autoCapitalize="off"
               autoCorrect="off"
               spellCheck={false}
             />
+
+            <button
+              type="button"
+              disabled={!url.trim()}
+              onClick={checkUrl}
+              className="
+                rounded-[10px]
+                bg-ios-blue
+                px-3
+                py-2
+                text-[15px]
+                font-semibold
+                text-white
+                disabled:opacity-40
+              "
+            >
+              Check
+            </button>
+
           </div>
         </div>
 
         <p className="form-hint">
-          Enter a direct URL to an image, video, audio file, or GIF.
+          Check the URL before adding media.
         </p>
       </div>
     </SheetDialog>
