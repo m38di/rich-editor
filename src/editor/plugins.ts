@@ -43,7 +43,7 @@ import {
   BlockInfo,
   isMarkActive,
 } from './commands'
-import { nextCell } from './tableCommands'
+import { nextCell, isInTable } from './tableCommands'
 import { M } from './schema'
 import { docTextLength } from './serializer'
 
@@ -204,6 +204,7 @@ export interface SelectionInfo {
   canRedo: boolean
   chars: number
   linkHref: string | null
+  inTable: boolean
 }
 
 export function selectionReporter(onChange: (info: SelectionInfo) => void): Plugin {
@@ -248,6 +249,7 @@ export function selectionReporter(onChange: (info: SelectionInfo) => void): Plug
           info.canRedo,
           info.chars,
           info.linkHref,
+          info.inTable,
         ])
         if (sig !== last) {
           last = sig
