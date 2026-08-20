@@ -12,7 +12,7 @@ import { buildKeymap, markdownRules, slashCommandPlugin, selectionReporter, Slas
 import { nodeViews } from './nodeviews'
 import { handleOrderedListMarkerClick } from './orderedListClick'
 import { updateBulletMarkers } from './listMarkers'
-import { tableSelectionPlugin } from './plugins/tableSelection'
+import { tableSelectionPlugin } from './plugins'
 
 export interface EditorOptions {
   onSlash: (s: SlashState) => void
