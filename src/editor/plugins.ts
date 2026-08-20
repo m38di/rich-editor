@@ -19,6 +19,7 @@ import {
   TextSelection,
   Command,
 } from 'prosemirror-state'
+import { EditorView } from 'prosemirror-view'
 import { keymap } from 'prosemirror-keymap'
 import { baseKeymap, chainCommands, wrapIn } from 'prosemirror-commands'
 import { undo, redo, undoDepth, redoDepth } from 'prosemirror-history'
@@ -193,6 +194,71 @@ export function slashCommandPlugin(onChange: (s: SlashState) => void): Plugin {
 export function getSlashState(state: EditorState): SlashState | undefined {
   return slashKey.getState(state)
 }
+
+// table
+
+export const tableSelectionKey = new PluginKey('tableSelection')
+
+function getCellElement(view: EditorView, pos: number): HTMLElement | null {
+  const dom = view.nodeDOM(pos)
+
+  if (!(dom instanceof HTMLElement)) return null
+
+  if (
+    dom.tagName === 'TD' ||
+    dom.tagName === 'TH'
+  ) {
+    return dom
+  }
+
+  return null
+}
+
+export const tableSelectionPlugin = new Plugin({
+  key: tableSelectionKey,
+
+  view(view) {
+    let activeCell: HTMLElement | null = null
+
+    const update = () => {
+      const { $from } = view.state.selection
+
+      let cellPos: number | null = null
+
+      for (let depth = $from.depth; depth > 0; depth--) {
+        const node = $from.node(depth)
+
+        if (
+          node.type.name === 'table_cell' ||
+          node.type.name === 'table_header'
+        ) {
+          cellPos = $from.before(depth)
+          break
+        }
+      }
+
+      if (activeCell) {
+        activeCell.classList.remove('re-table-cell-active')
+        activeCell = null
+      }
+
+      if (cellPos !== null) {
+        activeCell = getCellElement(view, cellPos)
+
+        activeCell?.classList.add('re-table-cell-active')
+      }
+    }
+
+    update()
+
+    return {
+      update,
+      destroy() {
+        activeCell?.classList.remove('re-table-cell-active')
+      },
+    }
+  },
+})
 
 // ── selection reporter (toolbar state) ──────────────────────────────────
 
