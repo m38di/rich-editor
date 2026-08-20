@@ -355,18 +355,14 @@ export const tableSelectionPlugin = () =>
     
         const cell = target.closest('td, th')
     
-        if (!cell) {
-          return false
-        }
+        if (!cell) return false
     
-        // Only intercept Ctrl/Cmd clicks.
         if (!mouse.ctrlKey && !mouse.metaKey) {
           return false
         }
     
-        // IMPORTANT:
-        // Prevent browser text selection.
         mouse.preventDefault()
+        mouse.stopPropagation()
     
         const pos = view.posAtDOM(cell, 0)
     
@@ -383,10 +379,7 @@ export const tableSelectionPlugin = () =>
           ? current.cells.filter(
               (x) => x.pos !== pos,
             )
-          : [
-              ...current.cells,
-              { pos },
-            ]
+          : [...current.cells, { pos }]
     
         view.dispatch(
           view.state.tr.setMeta(
@@ -400,8 +393,26 @@ export const tableSelectionPlugin = () =>
     
         return true
       },
+    
+      mousemove(view, event) {
+        const mouse = event as MouseEvent
+    
+        // Don't allow Ctrl-drag to turn into text selection.
+        if (mouse.ctrlKey || mouse.metaKey) {
+          const target = mouse.target
+    
+          if (
+            target instanceof HTMLElement &&
+            target.closest('td, th')
+          ) {
+            event.preventDefault()
+          }
+        }
+    
+        return false
+      },
     },
-    },
+    
   })
 
 // ── selection reporter (toolbar state) ──────────────────────────────────
