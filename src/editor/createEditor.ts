@@ -47,7 +47,7 @@ export function createEditor(mount: HTMLElement, opts: EditorOptions): EditorVie
       markdownRules(),
       slashCommandPlugin(opts.onSlash),
       selectionReporter(opts.onSelection),
-      tableSelectionPlugin,
+      tableSelectionPlugin(),
     ],
   })
 
