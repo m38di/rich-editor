@@ -44,6 +44,7 @@ import {
   insertMedia,
   insertMap,
 } from './editor/commands'
+import { insertTableCmd } from './editor/tableCommands'
 
 type DialogState =
   | { type: 'link' }
@@ -205,7 +206,7 @@ export default function App() {
       </main>
 
       {/* compose bar + floating format strip */}
-      <BottomPanel info={selection} openMenu={openMenu} onToggleMenu={toggleMenu} onGenerate={onGenerate} keyboardHeight={keyboardHeight}>
+      <BottomPanel info={selection} openMenu={openMenu} onToggleMenu={toggleMenu} onGenerate={onGenerate} onInsertTable={() => run(insertTableCmd(2, 2))} keyboardHeight={keyboardHeight}>
         {showFormatting && (
           <FormattingPanel
             info={selection}
