@@ -26,6 +26,7 @@ const DEFAULT_INFO: SelectionInfo = {
   canRedo: false,
   chars: 0,
   linkHref: null,
+  inTable: false,
 }
 
 const DEFAULT_SLASH: SlashState = { active: false, from: 0, to: 0, query: '' }
