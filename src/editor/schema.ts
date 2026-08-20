@@ -364,7 +364,19 @@ const nodes: Record<string, NodeSpec> = {
         },
       },
     ],
-    toDOM: () => ['table', 0],
+    toDOM: (node) => [
+      'table',
+      {
+        class: [
+          're-table',
+          node.attrs.bordered ? 're-table-bordered' : 're-table-borderless',
+          node.attrs.striped ? 're-table-striped' : '',
+        ]
+          .filter(Boolean)
+          .join(' '),
+      },
+      0,
+    ],
   },
 
   table_caption: {
