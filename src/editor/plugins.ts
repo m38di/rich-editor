@@ -344,70 +344,63 @@ export const tableSelectionPlugin = () =>
     handleDOMEvents: {
       mousedown(view, event) {
         const mouse = event as MouseEvent
-
-        // Only care about left click.
-        if (mouse.button !== 0) {
-          return false
-        }
-
+    
+        if (mouse.button !== 0) return false
+    
         const target = mouse.target
-
+    
         if (!(target instanceof HTMLElement)) {
           return false
         }
-
-        const cell = target.closest(
-          'td, th',
-        ) as HTMLElement | null
-
+    
+        const cell = target.closest('td, th')
+    
         if (!cell) {
           return false
         }
-
-        // Find the ProseMirror position belonging to this cell.
-        const pos = view.posAtDOM(cell, 0)
-
-        const current = tableSelectionKey.getState(
-          view.state,
-        )
-
-        if (!current) {
+    
+        // Only intercept Ctrl/Cmd clicks.
+        if (!mouse.ctrlKey && !mouse.metaKey) {
           return false
         }
-
-        // Ctrl-click = toggle cell.
-        if (mouse.ctrlKey || mouse.metaKey) {
-          event.preventDefault()
-
-          const exists = current.cells.some(
-            (x) => x.pos === pos,
-          )
-
-          const cells = exists
-            ? current.cells.filter(
-                (x) => x.pos !== pos,
-              )
-            : [
-                ...current.cells,
-                { pos },
-              ]
-
-          view.dispatch(
-            view.state.tr.setMeta(
-              tableSelectionKey,
-              {
-                cells,
-                multi: cells.length > 1,
-              },
-            ),
-          )
-
-          return true
-        }
-
-        // Normal click.
-        return false
+    
+        // IMPORTANT:
+        // Prevent browser text selection.
+        mouse.preventDefault()
+    
+        const pos = view.posAtDOM(cell, 0)
+    
+        const current =
+          tableSelectionKey.getState(view.state)
+    
+        if (!current) return true
+    
+        const exists = current.cells.some(
+          (x) => x.pos === pos,
+        )
+    
+        const cells = exists
+          ? current.cells.filter(
+              (x) => x.pos !== pos,
+            )
+          : [
+              ...current.cells,
+              { pos },
+            ]
+    
+        view.dispatch(
+          view.state.tr.setMeta(
+            tableSelectionKey,
+            {
+              cells,
+              multi: cells.length > 1,
+            },
+          ),
+        )
+    
+        return true
       },
+    },
     },
   })
 
