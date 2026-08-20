@@ -246,7 +246,9 @@ function getCellFromPos(
   return null
 }
 
-function getCurrentCell(state: EditorState): TableCellSelection | null {
+function getCurrentCell(
+  state: EditorState,
+): TableCellSelection | null {
   const { $from } = state.selection
 
   for (let depth = $from.depth; depth > 0; depth--) {
@@ -277,34 +279,31 @@ export const tableSelectionPlugin = () =>
         }
       },
 
-      apply(tr, old) {
-        // Our own selection changes
+      apply(tr, old, _oldState, newState) {
         const meta = tr.getMeta(tableSelectionKey)
-
+      
         if (meta) {
           return meta
         }
-
-        // Cursor moved normally.
+      
         if (tr.selectionSet) {
-          const cell = getCurrentCell(tr.doc)
-
+          const cell = getCurrentCell(newState)
+      
           if (!cell) {
             return {
               cells: [],
               multi: false,
             }
           }
-
+      
           return {
             cells: [cell],
             multi: false,
           }
         }
-
+      
         return old
       },
-    },
 
     props: {
       decorations(state) {
