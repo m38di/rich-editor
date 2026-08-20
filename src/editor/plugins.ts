@@ -197,8 +197,6 @@ export function getSlashState(state: EditorState): SlashState | undefined {
 
 // table
 
-export const tableSelectionKey = new PluginKey('tableSelection')
-
 function getCellElement(view: EditorView, pos: number): HTMLElement | null {
   const dom = view.nodeDOM(pos)
 
