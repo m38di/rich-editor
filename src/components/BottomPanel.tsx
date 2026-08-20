@@ -20,7 +20,7 @@ interface BottomPanelProps {
   children?: React.ReactNode
 }
 
-export function BottomPanel({ info, openMenu, onToggleMenu, onGenerate, keyboardHeight, children }: BottomPanelProps) {
+export function BottomPanel({ info, openMenu, onToggleMenu, onGenerate, onInsertTable, keyboardHeight, children }: BottomPanelProps) {
   const item = (id: MenuId, label: string, glyph: React.ReactNode) => (
     <button
       key={id}
