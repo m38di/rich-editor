@@ -212,11 +212,11 @@ function getCellElement(view: EditorView, pos: number): HTMLElement | null {
   return null
 }
 
-interface TableCellSelection {
+export interface TableCellSelection {
   pos: number
 }
 
-interface TableSelectionState {
+export interface TableSelectionState {
   cells: TableCellSelection[]
   multi: boolean
 }
@@ -224,29 +224,7 @@ interface TableSelectionState {
 export const tableSelectionKey =
   new PluginKey<TableSelectionState>('tableSelection')
 
-function getCellFromPos(
-  state: EditorState,
-  pos: number,
-): TableCellSelection | null {
-  const $pos = state.doc.resolve(pos)
-
-  for (let depth = $pos.depth; depth > 0; depth--) {
-    const node = $pos.node(depth)
-
-    if (
-      node.type.name === 'table_cell' ||
-      node.type.name === 'table_header'
-    ) {
-      return {
-        pos: $pos.before(depth),
-      }
-    }
-  }
-
-  return null
-}
-
-function getCurrentCell(
+function getCurrentTableCell(
   state: EditorState,
 ): TableCellSelection | null {
   const { $from } = state.selection
@@ -281,44 +259,47 @@ export const tableSelectionPlugin = () =>
 
       apply(tr, old, _oldState, newState) {
         const meta = tr.getMeta(tableSelectionKey)
-      
+
         if (meta) {
           return meta
         }
-      
+
         if (tr.selectionSet) {
-          const cell = getCurrentCell(newState)
-      
+          const cell = getCurrentTableCell(newState)
+
           if (!cell) {
             return {
               cells: [],
               multi: false,
             }
           }
-      
+
           return {
             cells: [cell],
             multi: false,
           }
         }
-      
+
         return old
       },
+    },
 
     props: {
       decorations(state) {
-        const value = tableSelectionKey.getState(state)
+        const selection = tableSelectionKey.getState(state)
 
-        if (!value || value.cells.length === 0) {
+        if (!selection || selection.cells.length === 0) {
           return DecorationSet.empty
         }
 
         const decorations: Decoration[] = []
 
-        for (const cell of value.cells) {
+        for (const cell of selection.cells) {
           const node = state.doc.nodeAt(cell.pos)
 
-          if (!node) continue
+          if (!node) {
+            continue
+          }
 
           decorations.push(
             Decoration.node(
@@ -341,43 +322,54 @@ export const tableSelectionPlugin = () =>
     handleDOMEvents: {
       mousedown(view, event) {
         const mouse = event as MouseEvent
-    
-        if (mouse.button !== 0) return false
-    
+
+        if (mouse.button !== 0) {
+          return false
+        }
+
         const target = mouse.target
-    
+
         if (!(target instanceof HTMLElement)) {
           return false
         }
-    
+
         const cell = target.closest('td, th')
-    
-        if (!cell) return false
-    
+
+        if (!cell) {
+          return false
+        }
+
+        // Only intercept Ctrl/Cmd-click.
         if (!mouse.ctrlKey && !mouse.metaKey) {
           return false
         }
-    
-        mouse.preventDefault()
-        mouse.stopPropagation()
-    
+
+        // Prevent browser text selection.
+        event.preventDefault()
+        event.stopPropagation()
+
         const pos = view.posAtDOM(cell, 0)
-    
+
         const current =
           tableSelectionKey.getState(view.state)
-    
-        if (!current) return true
-    
+
+        if (!current) {
+          return true
+        }
+
         const exists = current.cells.some(
-          (x) => x.pos === pos,
+          (item) => item.pos === pos,
         )
-    
+
         const cells = exists
           ? current.cells.filter(
-              (x) => x.pos !== pos,
+              (item) => item.pos !== pos,
             )
-          : [...current.cells, { pos }]
-    
+          : [
+              ...current.cells,
+              { pos },
+            ]
+
         view.dispatch(
           view.state.tr.setMeta(
             tableSelectionKey,
@@ -387,29 +379,10 @@ export const tableSelectionPlugin = () =>
             },
           ),
         )
-    
+
         return true
       },
-    
-      mousemove(view, event) {
-        const mouse = event as MouseEvent
-    
-        // Don't allow Ctrl-drag to turn into text selection.
-        if (mouse.ctrlKey || mouse.metaKey) {
-          const target = mouse.target
-    
-          if (
-            target instanceof HTMLElement &&
-            target.closest('td, th')
-          ) {
-            event.preventDefault()
-          }
-        }
-    
-        return false
-      },
     },
-    
   })
 
 // ── selection reporter (toolbar state) ──────────────────────────────────
