@@ -265,6 +265,11 @@ export const tableSelectionPlugin = () =>
         }
       
         if (tr.selectionSet) {
+          // While multi-selecting, preserve the cell selection.
+          if (old.multi) {
+            return old
+          }
+      
           const cell = getCurrentTableCell(newState)
       
           if (!cell) {
@@ -272,13 +277,6 @@ export const tableSelectionPlugin = () =>
               cells: [],
               multi: false,
             }
-          }
-      
-          // If we're already in multi-select mode,
-          // don't destroy the selected cells just because
-          // ProseMirror moved its text cursor.
-          if (old.multi) {
-            return old
           }
       
           return {
@@ -323,36 +321,34 @@ export const tableSelectionPlugin = () =>
         )
       },
     
-      handleClick(view, pos, event) {
+    },
+    handleDOMEvents: {
+      mousedown(view, event) {
         const mouse = event as MouseEvent
     
-        if (!mouse.ctrlKey && !mouse.metaKey) {
-          return false
-        }
-    
-        const $pos = view.state.doc.resolve(pos)
-    
-        let cellPos: number | null = null
-    
-        for (
-          let depth = $pos.depth;
-          depth > 0;
-          depth--
+        if (
+          mouse.button !== 0 ||
+          (!mouse.ctrlKey && !mouse.metaKey)
         ) {
-          const node = $pos.node(depth)
-    
-          if (
-            node.type.name === 'table_cell' ||
-            node.type.name === 'table_header'
-          ) {
-            cellPos = $pos.before(depth)
-            break
-          }
-        }
-    
-        if (cellPos == null) {
           return false
         }
+    
+        const target = mouse.target
+    
+        if (!(target instanceof HTMLElement)) {
+          return false
+        }
+    
+        const cell = target.closest('td, th')
+    
+        if (!cell) {
+          return false
+        }
+    
+        event.preventDefault()
+        event.stopPropagation()
+    
+        const pos = view.posAtDOM(cell, 0)
     
         const current =
           tableSelectionKey.getState(view.state)
@@ -362,16 +358,16 @@ export const tableSelectionPlugin = () =>
         }
     
         const exists = current.cells.some(
-          cell => cell.pos === cellPos,
+          item => item.pos === pos,
         )
     
         const cells = exists
           ? current.cells.filter(
-              cell => cell.pos !== cellPos,
+              item => item.pos !== pos,
             )
           : [
               ...current.cells,
-              { pos: cellPos },
+              { pos },
             ]
     
         view.dispatch(
@@ -379,7 +375,7 @@ export const tableSelectionPlugin = () =>
             tableSelectionKey,
             {
               cells,
-              multi: cells.length > 1,
+              multi: cells.length > 0,
             },
           ),
         )
