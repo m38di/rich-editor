@@ -214,59 +214,199 @@ function getCellElement(view: EditorView, pos: number): HTMLElement | null {
   return null
 }
 
+interface TableCellSelection {
+  pos: number
+}
+
+interface TableSelectionState {
+  cells: TableCellSelection[]
+  multi: boolean
+}
+
+export const tableSelectionKey =
+  new PluginKey<TableSelectionState>('tableSelection')
+
+function getCellFromPos(
+  state: EditorState,
+  pos: number,
+): TableCellSelection | null {
+  const $pos = state.doc.resolve(pos)
+
+  for (let depth = $pos.depth; depth > 0; depth--) {
+    const node = $pos.node(depth)
+
+    if (
+      node.type.name === 'table_cell' ||
+      node.type.name === 'table_header'
+    ) {
+      return {
+        pos: $pos.before(depth),
+      }
+    }
+  }
+
+  return null
+}
+
+function getCurrentCell(state: EditorState): TableCellSelection | null {
+  const { $from } = state.selection
+
+  for (let depth = $from.depth; depth > 0; depth--) {
+    const node = $from.node(depth)
+
+    if (
+      node.type.name === 'table_cell' ||
+      node.type.name === 'table_header'
+    ) {
+      return {
+        pos: $from.before(depth),
+      }
+    }
+  }
+
+  return null
+}
+
 export const tableSelectionPlugin = () =>
-  new Plugin({
-    key: new PluginKey('tableSelection'),
+  new Plugin<TableSelectionState>({
+    key: tableSelectionKey,
 
     state: {
       init() {
-        return DecorationSet.empty
+        return {
+          cells: [],
+          multi: false,
+        }
       },
 
       apply(tr, old) {
-        // Only update when the selection actually changed.
-        if (!tr.selectionSet) {
-          return old.map(tr.mapping, tr.doc)
+        // Our own selection changes
+        const meta = tr.getMeta(tableSelectionKey)
+
+        if (meta) {
+          return meta
         }
 
-        const { $from } = tr.selection
+        // Cursor moved normally.
+        if (tr.selectionSet) {
+          const cell = getCurrentCell(tr.doc)
 
-        let cellDepth = -1
+          if (!cell) {
+            return {
+              cells: [],
+              multi: false,
+            }
+          }
 
-        for (let depth = $from.depth; depth > 0; depth--) {
-          const name = $from.node(depth).type.name
-
-          if (
-            name === 'table_cell' ||
-            name === 'table_header'
-          ) {
-            cellDepth = depth
-            break
+          return {
+            cells: [cell],
+            multi: false,
           }
         }
 
-        if (cellDepth === -1) {
-          return DecorationSet.empty
-        }
-
-        const cell = $from.node(cellDepth)
-        const pos = $from.before(cellDepth)
-
-        return DecorationSet.create(tr.doc, [
-          Decoration.node(
-            pos,
-            pos + cell.nodeSize,
-            {
-              class: 're-table-cell-active',
-            },
-          ),
-        ])
+        return old
       },
     },
 
     props: {
       decorations(state) {
-        return this.getState(state)
+        const value = tableSelectionKey.getState(state)
+
+        if (!value || value.cells.length === 0) {
+          return DecorationSet.empty
+        }
+
+        const decorations: Decoration[] = []
+
+        for (const cell of value.cells) {
+          const node = state.doc.nodeAt(cell.pos)
+
+          if (!node) continue
+
+          decorations.push(
+            Decoration.node(
+              cell.pos,
+              cell.pos + node.nodeSize,
+              {
+                class: 're-table-cell-active',
+              },
+            ),
+          )
+        }
+
+        return DecorationSet.create(
+          state.doc,
+          decorations,
+        )
+      },
+    },
+
+    handleDOMEvents: {
+      mousedown(view, event) {
+        const mouse = event as MouseEvent
+
+        // Only care about left click.
+        if (mouse.button !== 0) {
+          return false
+        }
+
+        const target = mouse.target
+
+        if (!(target instanceof HTMLElement)) {
+          return false
+        }
+
+        const cell = target.closest(
+          'td, th',
+        ) as HTMLElement | null
+
+        if (!cell) {
+          return false
+        }
+
+        // Find the ProseMirror position belonging to this cell.
+        const pos = view.posAtDOM(cell, 0)
+
+        const current = tableSelectionKey.getState(
+          view.state,
+        )
+
+        if (!current) {
+          return false
+        }
+
+        // Ctrl-click = toggle cell.
+        if (mouse.ctrlKey || mouse.metaKey) {
+          event.preventDefault()
+
+          const exists = current.cells.some(
+            (x) => x.pos === pos,
+          )
+
+          const cells = exists
+            ? current.cells.filter(
+                (x) => x.pos !== pos,
+              )
+            : [
+                ...current.cells,
+                { pos },
+              ]
+
+          view.dispatch(
+            view.state.tr.setMeta(
+              tableSelectionKey,
+              {
+                cells,
+                multi: cells.length > 1,
+              },
+            ),
+          )
+
+          return true
+        }
+
+        // Normal click.
+        return false
       },
     },
   })
