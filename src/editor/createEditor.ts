@@ -12,6 +12,7 @@ import { buildKeymap, markdownRules, slashCommandPlugin, selectionReporter, Slas
 import { nodeViews } from './nodeviews'
 import { handleOrderedListMarkerClick } from './orderedListClick'
 import { updateBulletMarkers } from './listMarkers'
+import { tableSelectionPlugin } from './plugins/tableSelection'
 
 export interface EditorOptions {
   onSlash: (s: SlashState) => void
@@ -46,6 +47,7 @@ export function createEditor(mount: HTMLElement, opts: EditorOptions): EditorVie
       markdownRules(),
       slashCommandPlugin(opts.onSlash),
       selectionReporter(opts.onSelection),
+      tableSelectionPlugin,
     ],
   })
 
