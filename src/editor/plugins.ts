@@ -19,7 +19,7 @@ import {
   TextSelection,
   Command,
 } from 'prosemirror-state'
-import { EditorView } from 'prosemirror-view'
+import { Decoration, DecorationSet } from 'prosemirror-view'
 import { keymap } from 'prosemirror-keymap'
 import { baseKeymap, chainCommands, wrapIn } from 'prosemirror-commands'
 import { undo, redo, undoDepth, redoDepth } from 'prosemirror-history'
@@ -214,51 +214,62 @@ function getCellElement(view: EditorView, pos: number): HTMLElement | null {
   return null
 }
 
-export const tableSelectionPlugin = new Plugin({
-  key: tableSelectionKey,
+export const tableSelectionPlugin = () =>
+  new Plugin({
+    key: new PluginKey('tableSelection'),
 
-  view(view) {
-    let activeCell: HTMLElement | null = null
-
-    const update = () => {
-      const { $from } = view.state.selection
-
-      let cellPos: number | null = null
-
-      for (let depth = $from.depth; depth > 0; depth--) {
-        const node = $from.node(depth)
-
-        if (
-          node.type.name === 'table_cell' ||
-          node.type.name === 'table_header'
-        ) {
-          cellPos = $from.before(depth)
-          break
-        }
-      }
-
-      if (activeCell) {
-        activeCell.classList.remove('re-table-cell-active')
-        activeCell = null
-      }
-
-      if (cellPos !== null) {
-        activeCell = getCellElement(view, cellPos)
-
-        activeCell?.classList.add('re-table-cell-active')
-      }
-    }
-
-    update()
-
-    return {
-      update,
-      destroy() {
-        activeCell?.classList.remove('re-table-cell-active')
+    state: {
+      init() {
+        return DecorationSet.empty
       },
-    }
-  },
-})
+
+      apply(tr, old) {
+        // Only update when the selection actually changed.
+        if (!tr.selectionSet) {
+          return old.map(tr.mapping, tr.doc)
+        }
+
+        const { $from } = tr.selection
+
+        let cellDepth = -1
+
+        for (let depth = $from.depth; depth > 0; depth--) {
+          const name = $from.node(depth).type.name
+
+          if (
+            name === 'table_cell' ||
+            name === 'table_header'
+          ) {
+            cellDepth = depth
+            break
+          }
+        }
+
+        if (cellDepth === -1) {
+          return DecorationSet.empty
+        }
+
+        const cell = $from.node(cellDepth)
+        const pos = $from.before(cellDepth)
+
+        return DecorationSet.create(tr.doc, [
+          Decoration.node(
+            pos,
+            pos + cell.nodeSize,
+            {
+              class: 're-table-cell-active',
+            },
+          ),
+        ])
+      },
+    },
+
+    props: {
+      decorations(state) {
+        return this.getState(state)
+      },
+    },
+  })
 
 // ── selection reporter (toolbar state) ──────────────────────────────────
 
