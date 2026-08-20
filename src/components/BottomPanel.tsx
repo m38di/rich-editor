@@ -14,6 +14,7 @@ interface BottomPanelProps {
   openMenu: MenuId | null
   onToggleMenu: (id: MenuId) => void
   onGenerate: () => void
+  onInsertTable: () => void
   keyboardHeight: number
   /** menus + formatting strip render here, floating above the bar */
   children?: React.ReactNode
@@ -56,7 +57,15 @@ export function BottomPanel({ info, openMenu, onToggleMenu, onGenerate, keyboard
         {item('emoji', 'Emoji', <Smiley size={23} />)}
         {item('text', 'Text style', <Iv name="text2" size={21} />)}
         {item('list', 'Lists', <Iv name="lists" size={21} />)}
-        {item('table', 'Table', <Iv name="table" size={20} />)}
+        <button
+          type="button"
+          title="Insert 2×2 table"
+          aria-label="Insert 2×2 table"
+          onClick={onInsertTable}
+          className={`tool-btn ${info.inTable ? 'on' : ''}`}
+        >
+          <Iv name="table" size={20} />
+        </button>
         {item('math', 'Math', <Iv name="math" size={21} />)}
 
         <div className="flex-1" />
