@@ -342,25 +342,25 @@ export const tableSelectionPlugin = () =>
          * our separate cell selection just because the editor
          * cursor moved.
          */
-        if (tr.selectionSet) {
-          if (old.multi) {
-            return old
-          }
+        // if (tr.selectionSet) {
+        //   if (old.multi) {
+        //     return old
+        //   }
 
-          const cell = getCurrentTableCell(newState)
+        //   const cell = getCurrentTableCell(newState)
 
-          if (!cell) {
-            return {
-              cells: [],
-              multi: false,
-            }
-          }
+        //   if (!cell) {
+        //     return {
+        //       cells: [],
+        //       multi: false,
+        //     }
+        //   }
 
-          return {
-            cells: [cell],
-            multi: false,
-          }
-        }
+        //   return {
+        //     cells: [cell],
+        //     multi: false,
+        //   }
+        // }
 
         return old
       },
