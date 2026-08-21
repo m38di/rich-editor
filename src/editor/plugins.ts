@@ -258,6 +258,31 @@ function getTableCellAtPoint(
   )
 }
 
+function getTableCellFromSelection(
+  state: EditorState,
+): TableCellSelection | null {
+  const { $from } = state.selection
+
+  for (
+    let depth = $from.depth;
+    depth > 0;
+    depth--
+  ) {
+    const node = $from.node(depth)
+
+    if (
+      node.type.name === 'table_cell' ||
+      node.type.name === 'table_header'
+    ) {
+      return {
+        pos: $from.before(depth),
+      }
+    }
+  }
+
+  return null
+}
+
 function containsCell(
   cells: TableCellSelection[],
   pos: number,
@@ -304,23 +329,44 @@ export const tableSelectionPlugin = () =>
         }
       },
 
-      apply(tr, old) {
-        /*
-         * ONLY our own metadata changes the table-cell
-         * selection.
-         *
-         * This is extremely important.
-         *
-         * Typing, Enter, Backspace, arrows, etc. change
-         * ProseMirror's TextSelection but MUST NOT change
-         * our active-cell state.
-         */
+      apply(tr, old, oldState, newState) {
         const meta = tr.getMeta(tableSelectionKey)
-
+      
+        // Explicit cell-selection operation.
         if (meta) {
           return meta
         }
-
+      
+        // If we're currently doing multi-cell selection,
+        // don't let normal cursor movement destroy it.
+        if (old.multi) {
+          return old
+        }
+      
+        /*
+         * Normal editing.
+         *
+         * Follow ProseMirror's actual cursor.
+         *
+         * This is what makes Enter, arrow keys, etc.
+         * update the highlighted active cell correctly.
+         */
+        if (tr.selectionSet) {
+          const cell = getTableCellFromSelection(newState)
+      
+          if (cell) {
+            return {
+              cells: [cell],
+              multi: false,
+            }
+          }
+      
+          return {
+            cells: [],
+            multi: false,
+          }
+        }
+      
         return old
       },
     },
@@ -506,15 +552,12 @@ export const tableSelectionPlugin = () =>
            * text cursor exactly where the user clicked.
            */
           view.dispatch(
-            view.state.tr.setMeta(
-              tableSelectionKey,
-              {
-                cells: [cell],
-                multi: false,
-              },
-            ),
+            view.state.tr.setMeta(tableSelectionKey, {
+              cells: [cell],
+              multi: false,
+            }),
           )
-
+          
           return false
         },
 
