@@ -1463,13 +1463,9 @@ li.ProseMirror-selectednode {
    ACTIVE CELL
    ───────────────────────────────────────── */
 .re-table-cell-active {
-  position: relative;
   box-shadow:
     inset 0 0 0 2px rgba(0, 122, 255, 0.7);
-}
-
-.re-table-cell-active * {
-  user-select: text;
+  background: rgba(0, 122, 255, 0.06);
 }
 .re-table td:focus-within,
 .re-table th:focus-within {
