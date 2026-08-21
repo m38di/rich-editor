@@ -148,6 +148,16 @@ function serializeListItem(item: Node, task = false): string {
   return `<li>${inner}</li>`
 }
 
+function serializeTableCell(cell: Node): string {
+  let content = ''
+
+  cell.forEach((child) => {
+    content += serializeBlock(child)
+  })
+
+  return content
+}
+
 function serializeBlock(node: Node): string {
   switch (node.type.name) {
     case 'paragraph':
@@ -284,7 +294,7 @@ function serializeBlock(node: Node): string {
             if (cell.attrs.align !== 'left') a.push(`align="${cell.attrs.align}"`)
             if (cell.attrs.valign !== 'top') a.push(`valign="${cell.attrs.valign}"`)
             const attrs = a.length ? ' ' + a.join(' ') : ''
-            cells += `<${tag}${attrs}>${cell.firstChild ? renderInline(cell.firstChild) : ''}</${tag}>`
+            cells += `<${tag}${attrs}>${serializeTableCell(cell)}</${tag}>`
           })
           inner += `<tr>${cells}</tr>`
         }
