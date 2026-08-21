@@ -415,11 +415,7 @@ export const tableSelectionPlugin = () =>
           decorations,
         )
       },
-
-      // ── mouse + touch ────────────────────────────────────────────────
-
-      handleDOMEvents: {
-        handleKeyDown(view, event) {
+      handleKeyDown(view, event) {
           const state = tableSelectionKey.getState(view.state)
         
           if (!state?.cells.length) {
@@ -448,6 +444,9 @@ export const tableSelectionPlugin = () =>
         
           return false
         },
+      // ── mouse + touch ────────────────────────────────────────────────
+
+      handleDOMEvents: {
         mousedown(view, event) {
           const e = event as MouseEvent
 
