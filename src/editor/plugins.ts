@@ -351,21 +351,21 @@ export const tableSelectionPlugin = () =>
          * This is what makes Enter, arrow keys, etc.
          * update the highlighted active cell correctly.
          */
-        if (tr.selectionSet) {
-          const cell = getTableCellFromSelection(newState)
+        // if (tr.selectionSet) {
+        //   const cell = getTableCellFromSelection(newState)
       
-          if (cell) {
-            return {
-              cells: [cell],
-              multi: false,
-            }
-          }
+        //   if (cell) {
+        //     return {
+        //       cells: [cell],
+        //       multi: false,
+        //     }
+        //   }
       
-          return {
-            cells: [],
-            multi: false,
-          }
-        }
+        //   return {
+        //     cells: [],
+        //     multi: false,
+        //   }
+        // }
       
         return old
       },
@@ -419,6 +419,35 @@ export const tableSelectionPlugin = () =>
       // ── mouse + touch ────────────────────────────────────────────────
 
       handleDOMEvents: {
+        handleKeyDown(view, event) {
+          const state = tableSelectionKey.getState(view.state)
+        
+          if (!state?.cells.length) {
+            return false
+          }
+        
+          // Normal typing/editing exits multi-cell selection.
+          if (
+            event.key === 'Enter' ||
+            event.key === 'Backspace' ||
+            event.key === 'Delete' ||
+            event.key === 'ArrowLeft' ||
+            event.key === 'ArrowRight' ||
+            event.key === 'ArrowUp' ||
+            event.key === 'ArrowDown'
+          ) {
+            view.dispatch(
+              view.state.tr.setMeta(tableSelectionKey, {
+                cells: [],
+                multi: false,
+              }),
+            )
+        
+            return false
+          }
+        
+          return false
+        },
         mousedown(view, event) {
           const e = event as MouseEvent
 
@@ -709,16 +738,9 @@ export const tableSelectionPlugin = () =>
           clearLongPress()
 
           if (longPressTriggered) {
-            view.dom.classList.remove(
-              're-table-selecting',
-            )
-
-            /*
-             * Keep the selected cells.
-             */
+            view.dom.classList.remove('re-table-selecting')
             longPressTriggered = false
-
-            return true
+            return false
           }
 
           return false
