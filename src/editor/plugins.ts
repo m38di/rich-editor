@@ -283,6 +283,16 @@ function getTableCellAtDOM(
   return null
 }
 
+function getTableCellAtPoint(
+  view: EditorView,
+  x: number,
+  y: number,
+): TableCellSelection | null {
+  const target = document.elementFromPoint(x, y)
+
+  return getTableCellAtDOM(view, target)
+}
+
 function containsCell(
   cells: TableCellSelection[],
   pos: number,
@@ -405,9 +415,10 @@ export const tableSelectionPlugin = () =>
       
           const touch = e.touches[0]
       
-          const cell = getTableCellAtDOM(
+          const cell = getTableCellAtPoint(
             view,
-            touch.target,
+            touch.clientX,
+            touch.clientY,
           )
       
           if (!cell) {
@@ -495,9 +506,10 @@ export const tableSelectionPlugin = () =>
            */
           event.preventDefault()
       
-          const cell = getTableCellAtDOM(
+          const cell = getTableCellAtPoint(
             view,
-            touch.target,
+            touch.clientX,
+            touch.clientY,
           )
       
           if (!cell) {
