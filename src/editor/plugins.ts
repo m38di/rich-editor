@@ -196,6 +196,21 @@ export function getSlashState(state: EditorState): SlashState | undefined {
 }
 
 // ── table cell selection ────────────────────────────────────────────────
+let longPressTimer: ReturnType<typeof setTimeout> | null = null
+let longPressTriggered = false
+let touchStartX = 0
+let touchStartY = 0
+
+function clearLongPressTimer() {
+  if (longPressTimer !== null) {
+    clearTimeout(longPressTimer)
+    longPressTimer = null
+  }
+}
+
+function isTouchEvent(event: Event): event is TouchEvent {
+  return event.type.startsWith('touch')
+}
 
 export interface TableCellSelection {
   pos: number
@@ -381,6 +396,186 @@ export const tableSelectionPlugin = () =>
       },
     
       handleDOMEvents: {
+        touchstart(view, event) {
+          const e = event as TouchEvent
+      
+          if (e.touches.length !== 1) {
+            return false
+          }
+      
+          const touch = e.touches[0]
+      
+          const cell = getTableCellAtDOM(
+            view,
+            touch.target,
+          )
+      
+          if (!cell) {
+            clearLongPressTimer()
+            return false
+          }
+      
+          longPressTriggered = false
+      
+          touchStartX = touch.clientX
+          touchStartY = touch.clientY
+      
+          clearLongPressTimer()
+      
+          longPressTimer = setTimeout(() => {
+            longPressTriggered = true
+      
+            const current =
+              tableSelectionKey.getState(view.state)
+      
+            const cells =
+              current?.cells ?? []
+      
+            const next = containsCell(cells, cell.pos)
+              ? cells
+              : [...cells, cell]
+      
+            view.dispatch(
+              view.state.tr.setMeta(
+                tableSelectionKey,
+                {
+                  cells: next,
+                  multi: true,
+                },
+              ),
+            )
+      
+            /*
+             * Prevent native browser selection/context menu
+             * from starting after the long press.
+             */
+            view.dom.classList.add(
+              're-table-selecting',
+            )
+          }, 500)
+      
+          return false
+        },
+      
+        touchmove(view, event) {
+          const e = event as TouchEvent
+      
+          if (e.touches.length !== 1) {
+            clearLongPressTimer()
+            return false
+          }
+      
+          const touch = e.touches[0]
+      
+          const dx =
+            touch.clientX - touchStartX
+      
+          const dy =
+            touch.clientY - touchStartY
+      
+          /*
+           * Before long press:
+           * small movement is okay,
+           * large movement means this was scrolling.
+           */
+          if (!longPressTriggered) {
+            if (
+              Math.abs(dx) > 10 ||
+              Math.abs(dy) > 10
+            ) {
+              clearLongPressTimer()
+            }
+      
+            return false
+          }
+      
+          /*
+           * After long press, finger movement selects
+           * cells instead of selecting text.
+           */
+          event.preventDefault()
+      
+          const cell = getTableCellAtDOM(
+            view,
+            touch.target,
+          )
+      
+          if (!cell) {
+            return true
+          }
+      
+          const current =
+            tableSelectionKey.getState(view.state)
+      
+          if (
+            current &&
+            !containsCell(
+              current.cells,
+              cell.pos,
+            )
+          ) {
+            view.dispatch(
+              view.state.tr.setMeta(
+                tableSelectionKey,
+                {
+                  cells: [
+                    ...current.cells,
+                    cell,
+                  ],
+                  multi: true,
+                },
+              ),
+            )
+          }
+      
+          return true
+        },
+      
+        touchend(view) {
+          clearLongPressTimer()
+      
+          if (longPressTriggered) {
+            view.dom.classList.remove(
+              're-table-selecting',
+            )
+      
+            longPressTriggered = false
+      
+            return true
+          }
+      
+          return false
+        },
+      
+        touchcancel(view) {
+          clearLongPressTimer()
+      
+          longPressTriggered = false
+      
+          view.dom.classList.remove(
+            're-table-selecting',
+          )
+      
+          return false
+        },
+      
+        contextmenu(view, event) {
+          /*
+           * Native mobile long-press normally arrives here
+           * as a contextmenu event.
+           *
+           * Suppress it if our table selection already
+           * handled the long press.
+           */
+          if (longPressTriggered) {
+            event.preventDefault()
+            event.stopPropagation()
+      
+            return true
+          }
+      
+          return false
+        },
         mousedown(view, event) {
           const mouse = event as MouseEvent
     
