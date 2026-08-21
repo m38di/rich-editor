@@ -149,13 +149,23 @@ function serializeListItem(item: Node, task = false): string {
 }
 
 function serializeTableCell(cell: Node): string {
-  let content = ''
-
+  let cellContent = ''
+  let firstParagraph = true
+  
   cell.forEach((child) => {
-    content += serializeBlock(child)
+    if (child.type.name === 'paragraph') {
+      if (!firstParagraph) {
+        cellContent += '<br>'
+      }
+  
+      cellContent += renderInline(child)
+      firstParagraph = false
+    } else {
+      cellContent += serializeBlock(child)
+    }
   })
 
-  return content
+  return cellContent
 }
 
 function serializeBlock(node: Node): string {
