@@ -19,7 +19,7 @@ import {
   TextSelection,
   Command,
 } from 'prosemirror-state'
-import { Decoration, DecorationSet } from 'prosemirror-view'
+import { Decoration, DecorationSet, EditorView } from 'prosemirror-view'
 import { keymap } from 'prosemirror-keymap'
 import { baseKeymap, chainCommands, wrapIn } from 'prosemirror-commands'
 import { undo, redo, undoDepth, redoDepth } from 'prosemirror-history'
@@ -195,22 +195,7 @@ export function getSlashState(state: EditorState): SlashState | undefined {
   return slashKey.getState(state)
 }
 
-// table
-
-function getCellElement(view: EditorView, pos: number): HTMLElement | null {
-  const dom = view.nodeDOM(pos)
-
-  if (!(dom instanceof HTMLElement)) return null
-
-  if (
-    dom.tagName === 'TD' ||
-    dom.tagName === 'TH'
-  ) {
-    return dom
-  }
-
-  return null
-}
+// ── table cell selection ────────────────────────────────────────────────
 
 export interface TableCellSelection {
   pos: number
@@ -245,6 +230,62 @@ function getCurrentTableCell(
   return null
 }
 
+function getTableCellAtDOM(
+  view: EditorView,
+  target: EventTarget | null,
+): TableCellSelection | null {
+  if (!(target instanceof HTMLElement)) {
+    return null
+  }
+
+  const cell = target.closest('td, th')
+
+  if (!cell) {
+    return null
+  }
+
+  try {
+    const pos = view.posAtDOM(cell, 0)
+
+    const $pos = view.state.doc.resolve(pos)
+
+    for (let depth = $pos.depth; depth > 0; depth--) {
+      const node = $pos.node(depth)
+
+      if (
+        node.type.name === 'table_cell' ||
+        node.type.name === 'table_header'
+      ) {
+        return {
+          pos: $pos.before(depth),
+        }
+      }
+    }
+  } catch {
+    // DOM node may no longer correspond to the document.
+  }
+
+  return null
+}
+
+function containsCell(
+  cells: TableCellSelection[],
+  pos: number,
+): boolean {
+  return cells.some(cell => cell.pos === pos)
+}
+
+function toggleCell(
+  cells: TableCellSelection[],
+  cell: TableCellSelection,
+): TableCellSelection[] {
+  if (containsCell(cells, cell.pos)) {
+    return cells.filter(item => item.pos !== cell.pos)
+  }
+
+  return [...cells, cell]
+}
+
 export const tableSelectionPlugin = () =>
   new Plugin<TableSelectionState>({
     key: tableSelectionKey,
@@ -258,52 +299,79 @@ export const tableSelectionPlugin = () =>
       },
 
       apply(tr, old, _oldState, newState) {
+        /*
+         * Our own multi-selection transaction.
+         *
+         * This MUST be checked first.
+         */
         const meta = tr.getMeta(tableSelectionKey)
-      
+
         if (meta) {
           return meta
         }
-      
+
+        /*
+         * Normal ProseMirror selection changed.
+         *
+         * If we're currently multi-selecting, don't destroy
+         * our separate cell selection just because the editor
+         * cursor moved.
+         */
         if (tr.selectionSet) {
-          // While multi-selecting, preserve the cell selection.
           if (old.multi) {
             return old
           }
-      
+
           const cell = getCurrentTableCell(newState)
-      
+
           if (!cell) {
             return {
               cells: [],
               multi: false,
             }
           }
-      
+
           return {
             cells: [cell],
             multi: false,
           }
         }
-      
+
         return old
       },
     },
 
     props: {
+      /*
+       * Draw the active-cell outlines.
+       */
       decorations(state) {
-        const selection = tableSelectionKey.getState(state)
-    
-        if (!selection || selection.cells.length === 0) {
+        const selection =
+          tableSelectionKey.getState(state)
+
+        if (
+          !selection ||
+          selection.cells.length === 0
+        ) {
           return DecorationSet.empty
         }
-    
+
         const decorations: Decoration[] = []
-    
+
         for (const cell of selection.cells) {
           const node = state.doc.nodeAt(cell.pos)
-    
-          if (!node) continue
-    
+
+          if (!node) {
+            continue
+          }
+
+          if (
+            node.type.name !== 'table_cell' &&
+            node.type.name !== 'table_header'
+          ) {
+            continue
+          }
+
           decorations.push(
             Decoration.node(
               cell.pos,
@@ -314,62 +382,55 @@ export const tableSelectionPlugin = () =>
             ),
           )
         }
-    
+
         return DecorationSet.create(
           state.doc,
           decorations,
         )
       },
-    
-    },
-    handleDOMEvents: {
-      mousedown(view, event) {
+
+      /*
+       * Ctrl/Cmd + click.
+       *
+       * This is the ONLY place where we implement
+       * multi-cell selection.
+       */
+      handleClick(view, pos, event) {
         const mouse = event as MouseEvent
-    
+
         if (
-          mouse.button !== 0 ||
-          (!mouse.ctrlKey && !mouse.metaKey)
+          !mouse.ctrlKey &&
+          !mouse.metaKey
         ) {
           return false
         }
-    
-        const target = mouse.target
-    
-        if (!(target instanceof HTMLElement)) {
-          return false
-        }
-    
-        const cell = target.closest('td, th')
-    
+
+        const cell =
+          getTableCellAtDOM(view, mouse.target)
+
         if (!cell) {
           return false
         }
-    
-        event.preventDefault()
-        event.stopPropagation()
-    
-        const pos = view.posAtDOM(cell, 0)
-    
+
+        /*
+         * Prevent the browser/ProseMirror from treating
+         * Ctrl-click as normal text selection.
+         */
+        mouse.preventDefault()
+        mouse.stopPropagation()
+
         const current =
           tableSelectionKey.getState(view.state)
-    
+
         if (!current) {
           return true
         }
-    
-        const exists = current.cells.some(
-          item => item.pos === pos,
+
+        const cells = toggleCell(
+          current.cells,
+          cell,
         )
-    
-        const cells = exists
-          ? current.cells.filter(
-              item => item.pos !== pos,
-            )
-          : [
-              ...current.cells,
-              { pos },
-            ]
-    
+
         view.dispatch(
           view.state.tr.setMeta(
             tableSelectionKey,
@@ -379,8 +440,66 @@ export const tableSelectionPlugin = () =>
             },
           ),
         )
-    
+
         return true
+      },
+
+      /*
+       * Normal click while multi-selecting.
+       *
+       * Let ProseMirror perform its normal cursor
+       * placement, but clear our multi-selection.
+       */
+      handleClickOn(
+        view,
+        pos,
+        node,
+        nodePos,
+        event,
+      ) {
+        const mouse = event as MouseEvent
+
+        if (
+          mouse.ctrlKey ||
+          mouse.metaKey
+        ) {
+          return false
+        }
+
+        const current =
+          tableSelectionKey.getState(view.state)
+
+        if (
+          !current ||
+          !current.multi
+        ) {
+          return false
+        }
+
+        const cell =
+          getTableCellAtDOM(view, mouse.target)
+
+        if (!cell) {
+          return false
+        }
+
+        /*
+         * Clear multi-selection.
+         *
+         * Don't prevent the event — ProseMirror
+         * should still put the caret where the user clicked.
+         */
+        view.dispatch(
+          view.state.tr.setMeta(
+            tableSelectionKey,
+            {
+              cells: [cell],
+              multi: false,
+            },
+          ),
+        )
+
+        return false
       },
     },
   })
