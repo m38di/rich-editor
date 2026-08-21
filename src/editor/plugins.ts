@@ -826,6 +826,7 @@ export function buildKeymap(opts: { onOpenLink: () => void }): Plugin[] {
     'Mod-z': undo,
     'Mod-y': redo,
     'Shift-Mod-z': redo,
+
     'Mod-b': toggleBold,
     'Mod-i': toggleItalic,
     'Mod-u': toggleUnderline,
@@ -833,12 +834,22 @@ export function buildKeymap(opts: { onOpenLink: () => void }): Plugin[] {
     'Mod-e': toggleMono,
     'Mod-Shift-h': toggleHighlight,
     'Mod-Shift-s': toggleSpoiler,
+
     'Mod-k': () => {
       opts.onOpenLink()
       return true
     },
-    'Tab': chainCommands(nextCell(1), indentList),
-    'Shift-Tab': chainCommands(nextCell(-1), outdentList),
+
+    'Tab': chainCommands(
+      nextCell(1),
+      indentList,
+    ),
+
+    'Shift-Tab': chainCommands(
+      nextCell(-1),
+      outdentList,
+    ),
+
     'Mod-Alt-1': setTextType('heading', 1),
     'Mod-Alt-2': setTextType('heading', 2),
     'Mod-Alt-3': setTextType('heading', 3),
@@ -846,17 +857,23 @@ export function buildKeymap(opts: { onOpenLink: () => void }): Plugin[] {
     'Mod-Alt-5': setTextType('heading', 5),
     'Mod-Alt-6': setTextType('heading', 6),
     'Mod-Alt-0': setTextType('paragraph'),
+
     'Mod-Shift-7': wrapOrdered,
     'Mod-Shift-8': wrapBullet,
   }
+
   return [
     keymap(bindings),
+
     keymap({
       Enter: baseKeymap.Enter,
+
       Backspace: chainCommands(
         undoInputRule,
         baseKeymap.Backspace,
       ),
     }),
+
+    keymap(baseKeymap),
   ]
 }
