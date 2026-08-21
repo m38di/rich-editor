@@ -394,15 +394,15 @@ const nodes: Record<string, NodeSpec> = {
 
   table_cell: {
     attrs: cellAttrs,
-    content: 'paragraph',
+    content: 'block+',
     isolating: true,
     parseDOM: [{ tag: 'td', getAttrs: parseCellAttrs }],
     toDOM: (node) => ['td', cellDomAttrs(node.attrs), 0],
   },
-
+  
   table_header: {
     attrs: cellAttrs,
-    content: 'paragraph',
+    content: 'block+',
     isolating: true,
     parseDOM: [{ tag: 'th', getAttrs: parseCellAttrs }],
     toDOM: (node) => ['th', cellDomAttrs(node.attrs), 0],
