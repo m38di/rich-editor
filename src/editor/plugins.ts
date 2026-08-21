@@ -342,36 +342,27 @@ export const tableSelectionPlugin = () =>
     },
 
     props: {
-      /*
-       * Draw the active-cell outlines.
-       */
       decorations(state) {
-        const selection =
-          tableSelectionKey.getState(state)
-
-        if (
-          !selection ||
-          selection.cells.length === 0
-        ) {
+        const selection = tableSelectionKey.getState(state)
+    
+        if (!selection || selection.cells.length === 0) {
           return DecorationSet.empty
         }
-
+    
         const decorations: Decoration[] = []
-
+    
         for (const cell of selection.cells) {
           const node = state.doc.nodeAt(cell.pos)
-
-          if (!node) {
-            continue
-          }
-
+    
+          if (!node) continue
+    
           if (
             node.type.name !== 'table_cell' &&
             node.type.name !== 'table_header'
           ) {
             continue
           }
-
+    
           decorations.push(
             Decoration.node(
               cell.pos,
@@ -382,124 +373,164 @@ export const tableSelectionPlugin = () =>
             ),
           )
         }
-
+    
         return DecorationSet.create(
           state.doc,
           decorations,
         )
       },
-
-      /*
-       * Ctrl/Cmd + click.
-       *
-       * This is the ONLY place where we implement
-       * multi-cell selection.
-       */
-      handleClick(view, pos, event) {
-        const mouse = event as MouseEvent
-
-        if (
-          !mouse.ctrlKey &&
-          !mouse.metaKey
-        ) {
+    
+      handleDOMEvents: {
+        mousedown(view, event) {
+          const mouse = event as MouseEvent
+    
+          /*
+           * RIGHT CLICK
+           *
+           * Never let our left-click logic run.
+           *
+           * We only update the active cell if the pointer
+           * is currently over a table cell.
+           *
+           * We DO NOT preventDefault(), so the browser's
+           * context menu can still open.
+           */
+          if (mouse.button === 2) {
+            const cell = getTableCellAtDOM(
+              view,
+              mouse.target,
+            )
+    
+            if (cell) {
+              const current =
+                tableSelectionKey.getState(view.state)
+    
+              /*
+               * Right-clicking a cell makes that the active
+               * cell, but preserves multi-selection if it
+               * is already part of it.
+               */
+              if (
+                current &&
+                current.multi &&
+                containsCell(current.cells, cell.pos)
+              ) {
+                return false
+              }
+    
+              view.dispatch(
+                view.state.tr.setMeta(
+                  tableSelectionKey,
+                  {
+                    cells: [cell],
+                    multi: false,
+                  },
+                ),
+              )
+            }
+    
+            return false
+          }
+    
+          /*
+           * ONLY LEFT CLICK FROM HERE.
+           */
+          if (mouse.button !== 0) {
+            return false
+          }
+    
+          const cell = getTableCellAtDOM(
+            view,
+            mouse.target,
+          )
+    
+          const current =
+            tableSelectionKey.getState(view.state)
+    
+          /*
+           * Clicking OUTSIDE a table while multiple cells
+           * are selected.
+           *
+           * Clear our cell selection immediately.
+           *
+           * Do not prevent the event — ProseMirror still
+           * needs to handle the normal click.
+           */
+          if (!cell) {
+            if (
+              current &&
+              current.cells.length > 0
+            ) {
+              view.dispatch(
+                view.state.tr.setMeta(
+                  tableSelectionKey,
+                  {
+                    cells: [],
+                    multi: false,
+                  },
+                ),
+              )
+            }
+    
+            return false
+          }
+    
+          /*
+           * CTRL / CMD CLICK
+           *
+           * This is our multi-cell selection operation.
+           */
+          if (
+            mouse.ctrlKey ||
+            mouse.metaKey
+          ) {
+            mouse.preventDefault()
+            mouse.stopPropagation()
+    
+            const cells = toggleCell(
+              current?.cells ?? [],
+              cell,
+            )
+    
+            view.dispatch(
+              view.state.tr.setMeta(
+                tableSelectionKey,
+                {
+                  cells,
+                  multi: cells.length > 0,
+                },
+              ),
+            )
+    
+            return true
+          }
+    
+          /*
+           * NORMAL LEFT CLICK ON A CELL.
+           *
+           * If multiple cells are selected, reduce the
+           * selection to this one cell.
+           *
+           * We don't prevent the event, so ProseMirror
+           * continues placing the text cursor normally.
+           */
+          if (
+            current &&
+            current.multi
+          ) {
+            view.dispatch(
+              view.state.tr.setMeta(
+                tableSelectionKey,
+                {
+                  cells: [cell],
+                  multi: false,
+                },
+              ),
+            )
+          }
+    
           return false
-        }
-
-        const cell =
-          getTableCellAtDOM(view, mouse.target)
-
-        if (!cell) {
-          return false
-        }
-
-        /*
-         * Prevent the browser/ProseMirror from treating
-         * Ctrl-click as normal text selection.
-         */
-        mouse.preventDefault()
-        mouse.stopPropagation()
-
-        const current =
-          tableSelectionKey.getState(view.state)
-
-        if (!current) {
-          return true
-        }
-
-        const cells = toggleCell(
-          current.cells,
-          cell,
-        )
-
-        view.dispatch(
-          view.state.tr.setMeta(
-            tableSelectionKey,
-            {
-              cells,
-              multi: cells.length > 0,
-            },
-          ),
-        )
-
-        return true
-      },
-
-      /*
-       * Normal click while multi-selecting.
-       *
-       * Let ProseMirror perform its normal cursor
-       * placement, but clear our multi-selection.
-       */
-      handleClickOn(
-        view,
-        pos,
-        node,
-        nodePos,
-        event,
-      ) {
-        const mouse = event as MouseEvent
-
-        if (
-          mouse.ctrlKey ||
-          mouse.metaKey
-        ) {
-          return false
-        }
-
-        const current =
-          tableSelectionKey.getState(view.state)
-
-        if (
-          !current ||
-          !current.multi
-        ) {
-          return false
-        }
-
-        const cell =
-          getTableCellAtDOM(view, mouse.target)
-
-        if (!cell) {
-          return false
-        }
-
-        /*
-         * Clear multi-selection.
-         *
-         * Don't prevent the event — ProseMirror
-         * should still put the caret where the user clicked.
-         */
-        view.dispatch(
-          view.state.tr.setMeta(
-            tableSelectionKey,
-            {
-              cells: [cell],
-              multi: false,
-            },
-          ),
-        )
-
-        return false
+        },
       },
     },
   })
