@@ -196,21 +196,7 @@ export function getSlashState(state: EditorState): SlashState | undefined {
 }
 
 // ── table cell selection ────────────────────────────────────────────────
-let longPressTimer: ReturnType<typeof setTimeout> | null = null
-let longPressTriggered = false
-let touchStartX = 0
-let touchStartY = 0
-
-function clearLongPressTimer() {
-  if (longPressTimer !== null) {
-    clearTimeout(longPressTimer)
-    longPressTimer = null
-  }
-}
-
-function isTouchEvent(event: Event): event is TouchEvent {
-  return event.type.startsWith('touch')
-}
+// ── table cell selection ────────────────────────────────────────────────
 
 export interface TableCellSelection {
   pos: number
@@ -224,32 +210,11 @@ export interface TableSelectionState {
 export const tableSelectionKey =
   new PluginKey<TableSelectionState>('tableSelection')
 
-function getCurrentTableCell(
-  state: EditorState,
-): TableCellSelection | null {
-  const { $from } = state.selection
-
-  for (let depth = $from.depth; depth > 0; depth--) {
-    const node = $from.node(depth)
-
-    if (
-      node.type.name === 'table_cell' ||
-      node.type.name === 'table_header'
-    ) {
-      return {
-        pos: $from.before(depth),
-      }
-    }
-  }
-
-  return null
-}
-
 function getTableCellAtDOM(
   view: EditorView,
   target: EventTarget | null,
 ): TableCellSelection | null {
-  if (!(target instanceof HTMLElement)) {
+  if (!(target instanceof Element)) {
     return null
   }
 
@@ -261,7 +226,6 @@ function getTableCellAtDOM(
 
   try {
     const pos = view.posAtDOM(cell, 0)
-
     const $pos = view.state.doc.resolve(pos)
 
     for (let depth = $pos.depth; depth > 0; depth--) {
@@ -277,7 +241,7 @@ function getTableCellAtDOM(
       }
     }
   } catch {
-    // DOM node may no longer correspond to the document.
+    return null
   }
 
   return null
@@ -288,9 +252,10 @@ function getTableCellAtPoint(
   x: number,
   y: number,
 ): TableCellSelection | null {
-  const target = document.elementFromPoint(x, y)
-
-  return getTableCellAtDOM(view, target)
+  return getTableCellAtDOM(
+    view,
+    document.elementFromPoint(x, y),
+  )
 }
 
 function containsCell(
@@ -311,6 +276,22 @@ function toggleCell(
   return [...cells, cell]
 }
 
+// ── mobile long press state ────────────────────────────────────────────
+
+let longPressTimer: ReturnType<typeof setTimeout> | null = null
+let longPressTriggered = false
+let touchStartX = 0
+let touchStartY = 0
+
+function clearLongPress() {
+  if (longPressTimer !== null) {
+    clearTimeout(longPressTimer)
+    longPressTimer = null
+  }
+}
+
+// ── plugin ─────────────────────────────────────────────────────────────
+
 export const tableSelectionPlugin = () =>
   new Plugin<TableSelectionState>({
     key: tableSelectionKey,
@@ -323,11 +304,16 @@ export const tableSelectionPlugin = () =>
         }
       },
 
-      apply(tr, old, _oldState, newState) {
+      apply(tr, old) {
         /*
-         * Our own multi-selection transaction.
+         * ONLY our own metadata changes the table-cell
+         * selection.
          *
-         * This MUST be checked first.
+         * This is extremely important.
+         *
+         * Typing, Enter, Backspace, arrows, etc. change
+         * ProseMirror's TextSelection but MUST NOT change
+         * our active-cell state.
          */
         const meta = tr.getMeta(tableSelectionKey)
 
@@ -335,59 +321,38 @@ export const tableSelectionPlugin = () =>
           return meta
         }
 
-        /*
-         * Normal ProseMirror selection changed.
-         *
-         * If we're currently multi-selecting, don't destroy
-         * our separate cell selection just because the editor
-         * cursor moved.
-         */
-        // if (tr.selectionSet) {
-        //   if (old.multi) {
-        //     return old
-        //   }
-
-        //   const cell = getCurrentTableCell(newState)
-
-        //   if (!cell) {
-        //     return {
-        //       cells: [],
-        //       multi: false,
-        //     }
-        //   }
-
-        //   return {
-        //     cells: [cell],
-        //     multi: false,
-        //   }
-        // }
-
         return old
       },
     },
 
     props: {
+      // ── visual selection ─────────────────────────────────────────────
+
       decorations(state) {
-        const selection = tableSelectionKey.getState(state)
-    
-        if (!selection || selection.cells.length === 0) {
+        const selection =
+          tableSelectionKey.getState(state)
+
+        if (
+          !selection ||
+          selection.cells.length === 0
+        ) {
           return DecorationSet.empty
         }
-    
+
         const decorations: Decoration[] = []
-    
+
         for (const cell of selection.cells) {
           const node = state.doc.nodeAt(cell.pos)
-    
+
           if (!node) continue
-    
+
           if (
             node.type.name !== 'table_cell' &&
             node.type.name !== 'table_header'
           ) {
             continue
           }
-    
+
           decorations.push(
             Decoration.node(
               cell.pos,
@@ -398,54 +363,212 @@ export const tableSelectionPlugin = () =>
             ),
           )
         }
-    
+
         return DecorationSet.create(
           state.doc,
           decorations,
         )
       },
-    
+
+      // ── mouse + touch ────────────────────────────────────────────────
+
       handleDOMEvents: {
-        touchstart(view, event) {
-          const e = event as TouchEvent
-      
-          if (e.touches.length !== 1) {
+        mousedown(view, event) {
+          const e = event as MouseEvent
+
+          /*
+           * RIGHT CLICK
+           *
+           * Select the cell under the pointer, but DON'T
+           * preventDefault. This allows the contextmenu
+           * event to happen normally.
+           */
+          if (e.button === 2) {
+            const cell = getTableCellAtDOM(
+              view,
+              e.target,
+            )
+
+            if (!cell) {
+              return false
+            }
+
+            const current =
+              tableSelectionKey.getState(view.state)
+
+            /*
+             * If the right-clicked cell is already part
+             * of a multi-selection, preserve the selection.
+             */
+            if (
+              current?.multi &&
+              containsCell(
+                current.cells,
+                cell.pos,
+              )
+            ) {
+              return false
+            }
+
+            view.dispatch(
+              view.state.tr.setMeta(
+                tableSelectionKey,
+                {
+                  cells: [cell],
+                  multi: false,
+                },
+              ),
+            )
+
             return false
           }
-      
+
+          /*
+           * We only care about left mouse button.
+           */
+          if (e.button !== 0) {
+            return false
+          }
+
+          const cell = getTableCellAtDOM(
+            view,
+            e.target,
+          )
+
+          const current =
+            tableSelectionKey.getState(view.state)
+
+          /*
+           * LEFT CLICK OUTSIDE TABLE
+           *
+           * Clear cell selection.
+           *
+           * Don't preventDefault — ProseMirror should
+           * still handle the click normally.
+           */
+          if (!cell) {
+            if (
+              current &&
+              current.cells.length > 0
+            ) {
+              view.dispatch(
+                view.state.tr.setMeta(
+                  tableSelectionKey,
+                  {
+                    cells: [],
+                    multi: false,
+                  },
+                ),
+              )
+            }
+
+            return false
+          }
+
+          /*
+           * CTRL / CMD + LEFT CLICK
+           *
+           * Toggle this cell without allowing the browser
+           * to select text.
+           */
+          if (
+            e.ctrlKey ||
+            e.metaKey
+          ) {
+            e.preventDefault()
+            e.stopPropagation()
+
+            const cells = toggleCell(
+              current?.cells ?? [],
+              cell,
+            )
+
+            view.dispatch(
+              view.state.tr.setMeta(
+                tableSelectionKey,
+                {
+                  cells,
+                  multi: cells.length > 0,
+                },
+              ),
+            )
+
+            return true
+          }
+
+          /*
+           * NORMAL LEFT CLICK ON A CELL
+           *
+           * Always reduce the table selection to exactly
+           * this cell.
+           *
+           * Then return false so ProseMirror can put the
+           * text cursor exactly where the user clicked.
+           */
+          view.dispatch(
+            view.state.tr.setMeta(
+              tableSelectionKey,
+              {
+                cells: [cell],
+                multi: false,
+              },
+            ),
+          )
+
+          return false
+        },
+
+        // ── mobile ────────────────────────────────────────────────────
+
+        touchstart(view, event) {
+          const e = event as TouchEvent
+
+          if (e.touches.length !== 1) {
+            clearLongPress()
+            return false
+          }
+
           const touch = e.touches[0]
-      
+
           const cell = getTableCellAtPoint(
             view,
             touch.clientX,
             touch.clientY,
           )
-      
+
           if (!cell) {
-            clearLongPressTimer()
+            clearLongPress()
             return false
           }
-      
+
+          clearLongPress()
+
           longPressTriggered = false
-      
+
           touchStartX = touch.clientX
           touchStartY = touch.clientY
-      
-          clearLongPressTimer()
-      
+
           longPressTimer = setTimeout(() => {
             longPressTriggered = true
-      
+
             const current =
-              tableSelectionKey.getState(view.state)
-      
+              tableSelectionKey.getState(
+                view.state,
+              )
+
             const cells =
               current?.cells ?? []
-      
-            const next = containsCell(cells, cell.pos)
+
+            /*
+             * Long press starts/continues multi-selection.
+             */
+            const next = containsCell(
+              cells,
+              cell.pos,
+            )
               ? cells
               : [...cells, cell]
-      
+
             view.dispatch(
               view.state.tr.setMeta(
                 tableSelectionKey,
@@ -455,70 +578,66 @@ export const tableSelectionPlugin = () =>
                 },
               ),
             )
-      
-            /*
-             * Prevent native browser selection/context menu
-             * from starting after the long press.
-             */
+
             view.dom.classList.add(
               're-table-selecting',
             )
           }, 500)
-      
+
           return false
         },
-      
+
         touchmove(view, event) {
           const e = event as TouchEvent
-      
+
           if (e.touches.length !== 1) {
-            clearLongPressTimer()
+            clearLongPress()
             return false
           }
-      
+
           const touch = e.touches[0]
-      
+
           const dx =
             touch.clientX - touchStartX
-      
+
           const dy =
             touch.clientY - touchStartY
-      
+
           /*
-           * Before long press:
-           * small movement is okay,
-           * large movement means this was scrolling.
+           * If the finger moves before 500ms,
+           * this is scrolling, not selection.
            */
           if (!longPressTriggered) {
             if (
               Math.abs(dx) > 10 ||
               Math.abs(dy) > 10
             ) {
-              clearLongPressTimer()
+              clearLongPress()
             }
-      
+
             return false
           }
-      
+
           /*
-           * After long press, finger movement selects
-           * cells instead of selecting text.
+           * Long press has activated cell selection.
            */
           event.preventDefault()
-      
+
           const cell = getTableCellAtPoint(
             view,
             touch.clientX,
             touch.clientY,
           )
-      
+
           if (!cell) {
             return true
           }
-      
+
           const current =
-            tableSelectionKey.getState(view.state)
-      
+            tableSelectionKey.getState(
+              view.state,
+            )
+
           if (
             current &&
             !containsCell(
@@ -539,203 +658,52 @@ export const tableSelectionPlugin = () =>
               ),
             )
           }
-      
+
           return true
         },
-      
+
         touchend(view) {
-          clearLongPressTimer()
-      
+          clearLongPress()
+
           if (longPressTriggered) {
             view.dom.classList.remove(
               're-table-selecting',
             )
-      
+
+            /*
+             * Keep the selected cells.
+             */
             longPressTriggered = false
-      
+
             return true
           }
-      
+
           return false
         },
-      
+
         touchcancel(view) {
-          clearLongPressTimer()
-      
+          clearLongPress()
+
           longPressTriggered = false
-      
+
           view.dom.classList.remove(
             're-table-selecting',
           )
-      
+
           return false
         },
-      
+
+        /*
+         * Prevent iOS/Android's long-press context menu
+         * only when OUR long press has already activated.
+         */
         contextmenu(view, event) {
-          /*
-           * Native mobile long-press normally arrives here
-           * as a contextmenu event.
-           *
-           * Suppress it if our table selection already
-           * handled the long press.
-           */
           if (longPressTriggered) {
             event.preventDefault()
             event.stopPropagation()
-      
             return true
           }
-      
-          return false
-        },
-        mousedown(view, event) {
-          const mouse = event as MouseEvent
-    
-          /*
-           * RIGHT CLICK
-           *
-           * Never let our left-click logic run.
-           *
-           * We only update the active cell if the pointer
-           * is currently over a table cell.
-           *
-           * We DO NOT preventDefault(), so the browser's
-           * context menu can still open.
-           */
-          if (mouse.button === 2) {
-            const cell = getTableCellAtDOM(
-              view,
-              mouse.target,
-            )
-    
-            if (cell) {
-              const current =
-                tableSelectionKey.getState(view.state)
-    
-              /*
-               * Right-clicking a cell makes that the active
-               * cell, but preserves multi-selection if it
-               * is already part of it.
-               */
-              if (
-                current &&
-                current.multi &&
-                containsCell(current.cells, cell.pos)
-              ) {
-                return false
-              }
-    
-              view.dispatch(
-                view.state.tr.setMeta(
-                  tableSelectionKey,
-                  {
-                    cells: [cell],
-                    multi: false,
-                  },
-                ),
-              )
-            }
-    
-            return false
-          }
-    
-          /*
-           * ONLY LEFT CLICK FROM HERE.
-           */
-          if (mouse.button !== 0) {
-            return false
-          }
-    
-          const cell = getTableCellAtDOM(
-            view,
-            mouse.target,
-          )
-    
-          const current =
-            tableSelectionKey.getState(view.state)
-    
-          /*
-           * Clicking OUTSIDE a table while multiple cells
-           * are selected.
-           *
-           * Clear our cell selection immediately.
-           *
-           * Do not prevent the event — ProseMirror still
-           * needs to handle the normal click.
-           */
-          if (!cell) {
-            if (
-              current &&
-              current.cells.length > 0
-            ) {
-              view.dispatch(
-                view.state.tr.setMeta(
-                  tableSelectionKey,
-                  {
-                    cells: [],
-                    multi: false,
-                  },
-                ),
-              )
-            }
-    
-            return false
-          }
-    
-          /*
-           * CTRL / CMD CLICK
-           *
-           * This is our multi-cell selection operation.
-           */
-          if (
-            mouse.ctrlKey ||
-            mouse.metaKey
-          ) {
-            mouse.preventDefault()
-            mouse.stopPropagation()
-    
-            const cells = toggleCell(
-              current?.cells ?? [],
-              cell,
-            )
-    
-            view.dispatch(
-              view.state.tr.setMeta(
-                tableSelectionKey,
-                {
-                  cells,
-                  multi: cells.length > 0,
-                },
-              ),
-            )
-    
-            return true
-          }
-    
-          /*
-           * NORMAL LEFT CLICK ON A CELL.
-           *
-           * If multiple cells are selected, reduce the
-           * selection to this one cell.
-           *
-           * We don't prevent the event, so ProseMirror
-           * continues placing the text cursor normally.
-           */
-          if (
-            current &&
-            current.multi
-          ) {
-            view.dispatch(
-              view.state.tr.setMeta(
-                tableSelectionKey,
-                {
-                  cells: [cell],
-                  multi: false,
-                },
-              ),
-            )
-          }
-    
+
           return false
         },
       },
