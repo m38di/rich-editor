@@ -885,16 +885,14 @@ export function buildKeymap(opts: { onOpenLink: () => void }): Plugin[] {
 
   return [
     keymap(bindings),
-
+  
     keymap({
-      Enter: baseKeymap.Enter,
-
       Backspace: chainCommands(
         undoInputRule,
         baseKeymap.Backspace,
       ),
     }),
-
+  
     keymap(baseKeymap),
   ]
 }
