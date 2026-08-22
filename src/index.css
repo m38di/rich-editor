@@ -1462,15 +1462,12 @@ li.ProseMirror-selectednode {
 /* ─────────────────────────────────────────
    ACTIVE CELL
    ───────────────────────────────────────── */
-.re-table-cell-selecting .ProseMirror {
-  caret-color: transparent !important;
-}
-
-.re-table-cell-selecting,
-.re-table-cell-selecting * {
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-touch-callout: none;
+.ProseMirror.re-table-selecting,
+.ProseMirror.re-table-selecting * {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -webkit-touch-callout: none !important;
+  -webkit-user-drag: none !important;
 }
 .re-table-cell-active {
   box-shadow:
