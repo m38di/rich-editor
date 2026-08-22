@@ -1467,6 +1467,7 @@ li.ProseMirror-selectednode {
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
+  -webkit-user-drag: none;
 }
 .re-table-cell-active {
   box-shadow:
