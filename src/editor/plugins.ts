@@ -375,7 +375,84 @@ export const tableSelectionPlugin = () =>
 
     props: {
       // ── visual selection ─────────────────────────────────────────────
-
+      view(editorView) {
+        const handleTouchMove = (event: TouchEvent) => {
+          if (!longPressTriggered) {
+            return
+          }
+      
+          // Once long-press selection has started,
+          // the finger belongs to the cell selector.
+          event.preventDefault()
+          event.stopPropagation()
+      
+          if (event.touches.length !== 1) {
+            return
+          }
+      
+          const touch = event.touches[0]
+      
+          const cell = getTableCellAtPoint(
+            editorView,
+            touch.clientX,
+            touch.clientY,
+          )
+      
+          if (!cell) {
+            return
+          }
+      
+          const current =
+            tableSelectionKey.getState(editorView.state)
+      
+          if (!current) {
+            return
+          }
+      
+          if (!containsCell(current.cells, cell.pos)) {
+            editorView.dispatch(
+              editorView.state.tr.setMeta(
+                tableSelectionKey,
+                {
+                  cells: [
+                    ...current.cells,
+                    cell,
+                  ],
+                  multi: true,
+                },
+              ),
+            )
+          }
+        }
+      
+        /*
+         * IMPORTANT:
+         *
+         * This MUST be passive:false.
+         *
+         * .main-scroll is the actual scrolling container,
+         * so we need a real cancellable touchmove event.
+         */
+        editorView.dom.addEventListener(
+          'touchmove',
+          handleTouchMove,
+          {
+            passive: false,
+            capture: true,
+          },
+        )
+      
+        return {
+          destroy() {
+            editorView.dom.removeEventListener(
+              'touchmove',
+              handleTouchMove,
+              true,
+            )
+          },
+        }
+      },
+      
       decorations(state) {
         const selection =
           tableSelectionKey.getState(state)
@@ -617,6 +694,7 @@ export const tableSelectionPlugin = () =>
           clearLongPress()
         
           longPressTriggered = false
+        
           touchStartX = touch.clientX
           touchStartY = touch.clientY
         
@@ -629,7 +707,10 @@ export const tableSelectionPlugin = () =>
         
             const cells = current?.cells ?? []
         
-            const next = containsCell(cells, cell.pos)
+            const next = containsCell(
+              cells,
+              cell.pos,
+            )
               ? cells
               : [...cells, cell]
         
@@ -643,9 +724,6 @@ export const tableSelectionPlugin = () =>
               ),
             )
         
-            /*
-             * Only now do we enter cell-drag mode.
-             */
             view.dom.classList.add(
               're-table-cell-dragging',
             )
@@ -664,7 +742,11 @@ export const tableSelectionPlugin = () =>
         
           /*
            * Before long press:
-           * this is ordinary scrolling.
+           *
+           * DO NOTHING.
+           *
+           * The .main-scroll container must remain
+           * completely free to scroll.
            */
           if (!longPressTriggered) {
             const touch = e.touches[0]
@@ -686,46 +768,9 @@ export const tableSelectionPlugin = () =>
           }
         
           /*
-           * AFTER long press:
-           *
-           * This is our cell drag.
+           * The real work is now done by the native
+           * non-passive listener above.
            */
-          event.preventDefault()
-        
-          const touch = e.touches[0]
-        
-          const cell = getTableCellAtPoint(
-            view,
-            touch.clientX,
-            touch.clientY,
-          )
-        
-          if (!cell) {
-            return true
-          }
-        
-          const current =
-            tableSelectionKey.getState(view.state)
-        
-          if (!current) {
-            return true
-          }
-        
-          if (!containsCell(current.cells, cell.pos)) {
-            view.dispatch(
-              view.state.tr.setMeta(
-                tableSelectionKey,
-                {
-                  cells: [
-                    ...current.cells,
-                    cell,
-                  ],
-                  multi: true,
-                },
-              ),
-            )
-          }
-        
           return true
         },
         
