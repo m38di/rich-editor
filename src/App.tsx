@@ -1,14 +1,15 @@
-// src/App.tsx — the Telegram iOS shell: vibrancy nav bar, scrolling white
-// page, compose bar with the blue send (Generate) button, iOS sheets for
-// every menu/dialog, and the full-screen Preview sheet.
+// src/App.tsx — the shell: app bar, desktop ribbon, the paper document
+// canvas, the mobile dock, and every sheet/dialog/overlay on top.
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { undo, redo } from 'prosemirror-history'
 import { useEditorBridge } from './hooks/useEditorBridge'
 import { useKeyboardViewport } from './hooks/useKeyboardViewport.ts'
+import { useTheme } from './hooks/useTheme'
 import { TopBar } from './components/TopBar'
-import { BottomPanel, MenuId } from './components/BottomPanel'
-import { FormattingPanel } from './components/FormattingPanel'
+import { Ribbon } from './components/Ribbon'
+import { BottomPanel, MenuId, labelFor } from './components/BottomPanel'
+import { SelectionBar } from './components/SelectionBar'
 import {
   TextTypeMenu,
   ListMenu,
@@ -64,6 +65,8 @@ interface PreviewState {
   standalone: string
 }
 
+const DOCK_HEIGHT = 74
+
 export default function App() {
   const [dialog, setDialog] = useState<DialogState>(null)
   const [openMenu, setOpenMenu] = useState<MenuId | null>(null)
@@ -71,13 +74,14 @@ export default function App() {
   const [toast, setToast] = useState<string | null>(null)
   const [slashMuted, setSlashMuted] = useState(false)
   const [cellMenu, setCellMenu] = useState<number[] | null>(null)
-  const {keyboardHeight, keyboardOpen} = useKeyboardViewport()
+  const { keyboardHeight } = useKeyboardViewport()
+  const { choice: themeChoice, cycle: cycleTheme } = useTheme()
   const toastTimer = useRef<number | null>(null)
 
   const notify = useCallback((text: string) => {
     setToast(text)
     if (toastTimer.current) window.clearTimeout(toastTimer.current)
-    toastTimer.current = window.setTimeout(() => setToast(null), 2200)
+    toastTimer.current = window.setTimeout(() => setToast(null), 2400)
   }, [])
 
   const onOpenLink = useCallback(() => setDialog({ type: 'link' }), [])
@@ -105,26 +109,15 @@ export default function App() {
       setDialog({ type: 'math', pos, inline, tex: node?.attrs.tex ?? '' })
     })
     const offMediaUrl = bus.on('dialog:media-url', ({ pos }) => {
-      setDialog({
-        type: 'media-url',
-        pos,
-      })
+      setDialog({ type: 'media-url', pos })
     })
     const offToast = bus.on('toast', ({ text }) => notify(text))
     const offCellMenu = bus.on('table:menu', (cells) => setCellMenu(cells))
-    const offOrderedList = bus.on(
-      'dialog:ordered-list',
-      ({ pos }) => {
-        const node = viewRef.current?.state.doc.nodeAt(pos)
-    
-        if (!node || node.type.name !== 'ordered_list') return
-    
-        setDialog({
-          type: 'ordered-list',
-          pos,
-        })
-      },
-    )
+    const offOrderedList = bus.on('dialog:ordered-list', ({ pos }) => {
+      const node = viewRef.current?.state.doc.nodeAt(pos)
+      if (!node || node.type.name !== 'ordered_list') return
+      setDialog({ type: 'ordered-list', pos })
+    })
     return () => {
       offMap()
       offMath()
@@ -168,7 +161,7 @@ export default function App() {
     },
     [slash, run, viewRef],
   )
-  
+
   // ── Generate → Preview → Download ──────────────────────────────────────
   const onGenerate = useCallback(() => {
     const view = viewRef.current
@@ -183,21 +176,72 @@ export default function App() {
   const closeMenu = useCallback(() => setOpenMenu(null), [])
   const showFormatting = !selection.empty && !openMenu && !dialog && !preview
 
+  // the editor view only exists after the first commit, so the stats below
+  // need one extra pass before they can read the document
+  const [viewReady, setViewReady] = useState(false)
+  useEffect(() => setViewReady(true), [])
+
+  const docHeading = useMemo(() => {
+    const view = viewRef.current
+    return view ? docTitle(view.state.doc) : 'Untitled article'
+    // selection changes on every transaction, which is exactly when the
+    // title can change too
+  }, [viewRef, selection, viewReady])
+
+  const words = useMemo(() => {
+    const view = viewRef.current
+    if (!view) return 0
+    const text = view.state.doc.textBetween(0, view.state.doc.content.size, ' ', ' ')
+    const matched = text.trim().match(/\S+/g)
+    return matched ? matched.length : 0
+  }, [viewRef, selection, viewReady])
+
+  const chars = useMemo(() => {
+    const view = viewRef.current
+    if (!view) return selection.chars
+    return view.state.doc.textBetween(0, view.state.doc.content.size, '', '').length
+  }, [viewRef, selection, viewReady])
+
   return (
     <div className="app-shell">
       <TopBar
+        title={docHeading}
         canUndo={selection.canUndo}
         canRedo={selection.canRedo}
-        chars={selection.chars}
+        chars={chars}
+        words={words}
+        theme={themeChoice}
+        onCycleTheme={cycleTheme}
         onUndo={() => run(undo)}
         onRedo={() => run(redo)}
+        onGenerate={onGenerate}
       />
 
-      {/* scrolling page beneath the vibrancy bars */}
+      <div className="hidden md:block">
+        <Ribbon
+          info={selection}
+          run={run}
+          openMenu={openMenu}
+          onToggleMenu={toggleMenu}
+          onOpenLink={onOpenLink}
+          onInsertTable={() => run(insertTableCmd(2, 2))}
+          blockLabel={labelFor(selection)}
+        />
+      </div>
+
       <main className="main-scroll relative">
-        <div ref={mountRef} />
-        <p className="mx-auto max-w-[720px] px-5 pb-4 text-center text-[11.5px] font-medium text-ios-tertiary">
-          Telegram-style rich article · select text to format · type / for commands
+        <div className="paper">
+          <div ref={mountRef} />
+        </div>
+
+        <p className="doc-hint">
+          <span>
+            Select text to format · type <kbd className="kbd">/</kbd> for commands
+          </span>
+          <span className="hidden sm:inline">
+            <kbd className="kbd">#</kbd> heading · <kbd className="kbd">-</kbd> list ·{' '}
+            <kbd className="kbd">[]</kbd> checklist · <kbd className="kbd">|</kbd> quote
+          </span>
         </p>
 
         <SlashMenu
@@ -208,20 +252,29 @@ export default function App() {
         />
       </main>
 
-      {/* compose bar + floating format strip */}
-      <BottomPanel info={selection} openMenu={openMenu} onToggleMenu={toggleMenu} onGenerate={onGenerate} onInsertTable={() => run(insertTableCmd(2, 2))} keyboardHeight={keyboardHeight}>
-        {showFormatting && (
-          <FormattingPanel
-            info={selection}
-            run={run}
-            onOpenLink={onOpenLink}
-            onOpenDate={() => setDialog({ type: 'date' })}
-            onOpenMath={() => setDialog({ type: 'math', pos: null, inline: true, tex: '' })}
-          />
-        )}
-      </BottomPanel>
+      {showFormatting && (
+        <SelectionBar
+          info={selection}
+          viewRef={viewRef}
+          run={run}
+          onOpenLink={onOpenLink}
+          onOpenDate={() => setDialog({ type: 'date' })}
+          onOpenMath={() => setDialog({ type: 'math', pos: null, inline: true, tex: '' })}
+          bottomInset={DOCK_HEIGHT + keyboardHeight}
+        />
+      )}
 
-      {/* iOS sheets (each carries its own dimmed backdrop) */}
+      <BottomPanel
+        className="md:hidden"
+        info={selection}
+        openMenu={openMenu}
+        onToggleMenu={toggleMenu}
+        onGenerate={onGenerate}
+        onInsertTable={() => run(insertTableCmd(2, 2))}
+        keyboardHeight={keyboardHeight}
+      />
+
+      {/* sheets */}
       {openMenu === 'text' && <TextTypeMenu info={selection} run={run} close={closeMenu} />}
       {openMenu === 'list' && <ListMenu info={selection} run={run} close={closeMenu} />}
       {openMenu === 'table' && (
@@ -260,7 +313,9 @@ export default function App() {
           notify={notify}
         />
       )}
-      {dialog?.type === 'date' && <DateDialog run={run} onClose={() => setDialog(null)} notify={notify} />}
+      {dialog?.type === 'date' && (
+        <DateDialog run={run} onClose={() => setDialog(null)} notify={notify} />
+      )}
       {dialog?.type === 'math' && (
         <MathDialog
           viewRef={viewRef}
@@ -293,7 +348,6 @@ export default function App() {
             if (!node) return
 
             if (node.type.name === 'media_figure') {
-              // single media block — set src + kind directly
               view.dispatch(
                 view.state.tr.setNodeMarkup(dialog.pos, undefined, {
                   ...node.attrs,
@@ -306,42 +360,24 @@ export default function App() {
 
             if (node.type.name !== 'media_group') return
 
-            const items = Array.isArray(node.attrs.items)
-              ? [...node.attrs.items]
-              : []
-
+            const items = Array.isArray(node.attrs.items) ? [...node.attrs.items] : []
             if (items.length >= 50) {
               notify('Maximum 50 media items')
               return
             }
-
-            items.push({
-              kind,
-              src: url,
-              spoiler: false,
-            })
-
+            items.push({ kind, src: url, spoiler: false })
             view.dispatch(
-              view.state.tr.setNodeMarkup(
-                dialog.pos,
-                undefined,
-                {
-                  ...node.attrs,
-                  items,
-                },
-              ),
+              view.state.tr.setNodeMarkup(dialog.pos, undefined, { ...node.attrs, items }),
             )
           }}
         />
       )}
       {dialog?.type === 'ordered-list' && (
-        <OrderedListDialog
-          viewRef={viewRef}
-          pos={dialog.pos}
-          onClose={() => setDialog(null)}
-        />
+        <OrderedListDialog viewRef={viewRef} pos={dialog.pos} onClose={() => setDialog(null)} />
       )}
-      {dialog?.type === 'table' && <TableSizeDialog run={run} onClose={() => setDialog(null)} />}
+      {dialog?.type === 'table' && (
+        <TableSizeDialog run={run} onClose={() => setDialog(null)} />
+      )}
       {dialog?.type === 'caption' && (
         <CaptionDialog run={run} onClose={() => setDialog(null)} notify={notify} />
       )}
@@ -362,9 +398,8 @@ export default function App() {
         />
       )}
 
-      {/* iOS notification banner */}
       {toast && (
-        <div className="ios-banner" role="status">
+        <div className="toast" role="status">
           {toast}
         </div>
       )}

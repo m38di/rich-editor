@@ -64,7 +64,7 @@ const chip = (active: boolean) =>
   `rounded-full border px-3 py-1 text-[12.5px] font-medium transition active:scale-95 ${
     active
       ? 'border-ios-blue bg-ios-blue/10 text-ios-blue'
-      : 'border-ios-sep bg-white text-ios-secondary'
+      : 'border-ios-sep bg-ios-card text-ios-secondary'
   }`
 
 // ── custom emoji dialog (Android: custom emoji entity → tg-emoji) ───────

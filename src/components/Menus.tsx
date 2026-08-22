@@ -376,8 +376,13 @@ export function AttachSheet({ run, close, onOpenTableSize }: AttachSheetProps) {
             key={it.label}
             type="button"
             onClick={() => {
-              it.onClick()
-              close()
+              // the sheet must close even if an insert command misbehaves,
+              // otherwise the modal traps the user
+              try {
+                it.onClick()
+              } finally {
+                close()
+              }
             }}
             className="press flex flex-col items-center gap-1.5 rounded-[10px] px-1 py-2.5"
           >
@@ -490,7 +495,7 @@ export function SlashMenu({ slash, viewRef, onPick, onDismiss }: SlashMenuProps)
     if (!rect) return
     setPos({
       top: coords.bottom - rect.top + (host as HTMLElement).scrollTop + 8,
-      left: Math.max(10, Math.min(coords.left - rect.left, rect.width - 236)),
+      left: Math.max(10, Math.min(coords.left - rect.left, rect.width - 260)),
     })
   }, [slash, viewRef])
 
@@ -517,20 +522,21 @@ export function SlashMenu({ slash, viewRef, onPick, onDismiss }: SlashMenuProps)
 
   return (
     <div
-      className="absolute z-30 w-[224px] rounded-[10px] border border-black/5 bg-white/95 p-1 shadow-ios-pop backdrop-blur-xl animate-pop-in"
+      className="popover animate-pop-in absolute z-30 w-[248px]"
       style={{ top: pos.top, left: pos.left }}
     >
-      {matches.map((m) => (
+      {matches.map((m, i) => (
         <button
           key={m.id + m.label}
           type="button"
           onClick={() => onPick(m)}
-          className="flex w-full items-center gap-2.5 rounded-[8px] px-2 py-1.5 text-left transition active:bg-ios-fill"
+          className="popover-row"
         >
-          <span className="grid h-[27px] w-[27px] shrink-0 place-items-center rounded-[7px] bg-ios-blue/10 text-ios-blue">
+          <span className="grid h-[28px] w-[28px] shrink-0 place-items-center rounded-[8px] bg-ios-blue/10 text-ios-blue">
             <Iv name={SLASH_ICON[m.id] || 'text'} size={16} />
           </span>
-          <span className="text-[15px] font-medium tracking-[-0.2px] text-ios-label">{m.label}</span>
+          <span className="truncate">{m.label}</span>
+          {i === 0 && <span className="popover-hint">↵</span>}
         </button>
       ))}
     </div>

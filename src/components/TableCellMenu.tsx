@@ -38,7 +38,7 @@ import {
   setAlignOnCells,
   setVAlignOnCells,
 } from '../editor/tableCommands'
-import { clearTableSelection } from '../editor/plugins'
+import { clearTableSelection, dismissTableMenu } from '../editor/plugins'
 import { Iv } from './ivIcons'
 
 interface Props {
@@ -123,12 +123,18 @@ export function TableCellMenu({ viewRef, cellPos, onClose }: Props) {
   /** Run an action then leave cell-selection mode (Android exitCellSelectionMode). */
   const act = (cmd: Command) => {
     dispatch(cmd)
-    exit()
-  }
-
-  const exit = () => {
     const v = viewRef.current
     if (v) clearTableSelection(v)
+    onClose()
+  }
+
+  /**
+   * Dismissing the menu keeps the cells selected — the user may have built the
+   * selection with Ctrl+click and simply not need the menu right now.
+   */
+  const exit = () => {
+    const v = viewRef.current
+    if (v) dismissTableMenu(v)
     onClose()
   }
 

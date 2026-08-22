@@ -1,7 +1,7 @@
 // src/components/ErrorBoundary.tsx
 //
-// Catches any runtime error and renders an iOS-style alert card instead
-// of a blank page — so a crash is always readable and actionable.
+// Catches any runtime error and renders a readable, actionable card instead
+// of a blank page. Uses the design tokens so it matches the active theme.
 
 import React from 'react'
 
@@ -30,29 +30,24 @@ export class ErrorBoundary extends React.Component<
     const stack = (this.state.error.stack || '').split('\n').slice(0, 6).join('\n')
 
     return (
-      <div
-        className="grid min-h-screen place-items-center p-6"
-        style={{
-          background: '#f2f2f7',
-          fontFamily:
-            "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', 'Segoe UI', system-ui, sans-serif",
-        }}
-      >
-        <div
-          className="w-full max-w-[400px] rounded-[14px] bg-white p-6 text-center"
-          style={{ boxShadow: '0 10px 40px rgba(0,0,0,0.12)' }}
-        >
-          <div className="text-[36px]">⚠️</div>
-          <h1 className="mt-2 text-[19px] font-bold tracking-[-0.3px] text-black">
+      <div className="grid min-h-screen place-items-center bg-ios-canvas p-6">
+        <div className="w-full max-w-[440px] rounded-sheet border border-ios-sep bg-ios-card p-7 text-center shadow-ios-sheet">
+          <div
+            className="mx-auto grid h-12 w-12 place-items-center rounded-full text-[24px]"
+            style={{ background: 'var(--fill)' }}
+          >
+            ⚠️
+          </div>
+          <h1 className="mt-3 text-[19px] font-bold tracking-[-0.4px] text-ios-label">
             The editor hit a snag
           </h1>
-          <p className="mt-1.5 text-[13.5px] leading-snug" style={{ color: 'rgba(60,60,67,0.6)' }}>
-            The crash is contained — copy the details below and report them, or reload for a
-            fresh session.
+          <p className="mt-2 text-[13.5px] leading-relaxed text-ios-secondary">
+            The crash is contained. Copy the details below and report them, or reload for a
+            fresh session — your unsaved document cannot be recovered.
           </p>
           <pre
-            className="mt-4 max-h-[180px] overflow-auto whitespace-pre-wrap break-words rounded-[10px] p-3 text-left font-mono text-[11.5px] leading-relaxed"
-            style={{ background: '#f2f2f7', color: '#ff3b30' }}
+            className="mt-4 max-h-[200px] overflow-auto whitespace-pre-wrap break-words rounded-card bg-ios-grouped p-3 text-left font-mono text-[11.5px] leading-relaxed"
+            style={{ color: 'var(--red)' }}
           >
             {message}
             {'\n\n'}
@@ -62,16 +57,14 @@ export class ErrorBoundary extends React.Component<
             <button
               type="button"
               onClick={() => window.location.reload()}
-              className="flex-1 rounded-[10px] py-2.5 text-[15px] font-semibold text-white transition active:scale-95"
-              style={{ background: '#007aff' }}
+              className="pill-btn primary flex-1 justify-center"
             >
               Reload
             </button>
             <button
               type="button"
               onClick={() => this.setState({ error: null })}
-              className="flex-1 rounded-[10px] py-2.5 text-[15px] font-semibold text-black transition active:scale-95"
-              style={{ background: 'rgba(120,120,128,0.12)' }}
+              className="pill-btn flex-1 justify-center"
             >
               Continue
             </button>

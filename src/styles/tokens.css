@@ -1,0 +1,148 @@
+/* ══════════════════════════════════════════════════════════════════════
+   Design tokens — one source of truth for both themes.
+
+   Colours that need Tailwind alpha modifiers (bg-ios-blue/10) are stored
+   as bare RGB channels; everything else is stored ready-to-use so the
+   token can carry its own transparency.
+   ══════════════════════════════════════════════════════════════════════ */
+
+:root {
+  color-scheme: light;
+
+  /* accent — channels, so `rgb(var(--c-accent) / <alpha>)` works */
+  --c-accent: 37 99 235;
+  --c-accent-hi: 99 102 241;
+
+  --accent: rgb(37 99 235);
+  --accent-strong: rgb(29 78 216);
+  --accent-ink: #ffffff;
+  --accent-tint: rgba(37, 99, 235, 0.09);
+  --accent-tint-strong: rgba(37, 99, 235, 0.15);
+  --accent-gradient: linear-gradient(135deg, #6366f1 0%, #2563eb 100%);
+  --accent-glow: 0 6px 20px -6px rgba(37, 99, 235, 0.55);
+
+  /* surfaces */
+  --canvas: #f4f5f8;
+  --canvas-mesh:
+    radial-gradient(1100px 520px at 88% -12%, rgba(99, 102, 241, 0.1), transparent 62%),
+    radial-gradient(820px 420px at -10% 106%, rgba(56, 189, 248, 0.11), transparent 58%);
+  --surface: #ffffff;
+  --surface-2: #f6f7fa;
+  --surface-3: #eef0f5;
+  --elevated: rgba(255, 255, 255, 0.86);
+  --bar: rgba(250, 251, 253, 0.78);
+
+  /* ink */
+  --text: #101422;
+  --muted: #5b6478;
+  --faint: #8b93a5;
+
+  /* lines + fills */
+  --sep: rgba(16, 20, 34, 0.09);
+  --sep-strong: rgba(16, 20, 34, 0.16);
+  --fill: rgba(16, 20, 34, 0.05);
+  --fill-2: rgba(16, 20, 34, 0.09);
+  --fill-3: rgba(16, 20, 34, 0.14);
+
+  /* semantic */
+  --green: #16a34a;
+  --red: #e5484d;
+  --orange: #f5820b;
+  --yellow: #eab308;
+  --purple: #8b5cf6;
+  --pink: #ec4899;
+  --teal: #0ea5e9;
+  --indigo: #6366f1;
+
+  /* legacy aliases still referenced by editor styles */
+  --blue: var(--accent);
+  --blue-deep: var(--accent-strong);
+  --grouped: var(--surface-2);
+  --label: var(--text);
+  --secondary: var(--muted);
+  --tertiary: var(--faint);
+
+  /* elevation */
+  --shadow-xs: 0 1px 2px rgba(16, 20, 34, 0.06);
+  --shadow-sm: 0 1px 2px rgba(16, 20, 34, 0.05), 0 2px 8px -2px rgba(16, 20, 34, 0.08);
+  --shadow-md: 0 2px 4px rgba(16, 20, 34, 0.04), 0 10px 24px -8px rgba(16, 20, 34, 0.14);
+  --shadow-lg: 0 4px 8px rgba(16, 20, 34, 0.05), 0 18px 48px -12px rgba(16, 20, 34, 0.22);
+  --shadow-pop: 0 0 0 1px rgba(16, 20, 34, 0.06), 0 12px 36px -10px rgba(16, 20, 34, 0.28);
+  --shadow-paper: 0 0 0 1px rgba(16, 20, 34, 0.05), 0 1px 2px rgba(16, 20, 34, 0.04),
+    0 24px 60px -30px rgba(16, 20, 34, 0.2);
+
+  /* shape */
+  --r-xs: 8px;
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 18px;
+  --r-xl: 24px;
+
+  /* motion */
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --spring: cubic-bezier(0.32, 0.72, 0, 1);
+  --dur-fast: 130ms;
+  --dur: 200ms;
+  --dur-slow: 340ms;
+}
+
+.dark {
+  color-scheme: dark;
+
+  --c-accent: 96 165 250;
+  --c-accent-hi: 129 140 248;
+
+  --accent: rgb(96 165 250);
+  --accent-strong: rgb(147 197 253);
+  --accent-ink: #07101f;
+  --accent-tint: rgba(96, 165, 250, 0.14);
+  --accent-tint-strong: rgba(96, 165, 250, 0.22);
+  --accent-gradient: linear-gradient(135deg, #818cf8 0%, #60a5fa 100%);
+  --accent-glow: 0 6px 22px -6px rgba(96, 165, 250, 0.45);
+
+  --canvas: #0b0e14;
+  --canvas-mesh:
+    radial-gradient(1100px 520px at 88% -12%, rgba(99, 102, 241, 0.18), transparent 62%),
+    radial-gradient(820px 420px at -10% 106%, rgba(14, 165, 233, 0.14), transparent 58%);
+  --surface: #151922;
+  --surface-2: #1b202b;
+  --surface-3: #222836;
+  --elevated: rgba(28, 33, 44, 0.88);
+  --bar: rgba(15, 18, 26, 0.74);
+
+  --text: #e8ecf4;
+  --muted: #9aa3b6;
+  --faint: #6c7688;
+
+  --sep: rgba(255, 255, 255, 0.09);
+  --sep-strong: rgba(255, 255, 255, 0.16);
+  --fill: rgba(255, 255, 255, 0.06);
+  --fill-2: rgba(255, 255, 255, 0.1);
+  --fill-3: rgba(255, 255, 255, 0.16);
+
+  --green: #3ecf7f;
+  --red: #ff6369;
+  --orange: #ffa23a;
+  --yellow: #f5cf4a;
+  --purple: #a78bfa;
+  --pink: #f472b6;
+  --teal: #38bdf8;
+  --indigo: #818cf8;
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4), 0 2px 8px -2px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.45), 0 12px 28px -10px rgba(0, 0, 0, 0.7);
+  --shadow-lg: 0 6px 12px rgba(0, 0, 0, 0.45), 0 22px 54px -14px rgba(0, 0, 0, 0.8);
+  --shadow-pop: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 14px 40px -10px rgba(0, 0, 0, 0.8);
+  --shadow-paper: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 24px 60px -30px rgba(0, 0, 0, 0.9);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -261,3 +261,81 @@ export const Location = (p: IconProps) => (
     <path d="M12 3.25v2.5M12 18.25v2.5M3.25 12h2.5M18.25 12h2.5" />
   </S>
 )
+
+/* ── shell chrome ──────────────────────────────────────────────────── */
+
+export const Sun = (p: IconProps) => (
+  <S {...p}>
+    <circle cx="12" cy="12" r="4.25" />
+    <path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6" />
+  </S>
+)
+
+export const Moon = (p: IconProps) => (
+  <S {...p}>
+    <path d="M20.5 14.4A8.6 8.6 0 1 1 9.6 3.5a7 7 0 0 0 10.9 10.9z" />
+  </S>
+)
+
+export const Auto = (p: IconProps) => (
+  <S {...p}>
+    <circle cx="12" cy="12" r="8.75" />
+    <path d="M12 3.25a8.75 8.75 0 0 1 0 17.5z" fill="currentColor" stroke="none" />
+  </S>
+)
+
+export const Sparkle = (p: IconProps) => (
+  <S {...p}>
+    <path d="M12 3.5l1.9 5.1 5.1 1.9-5.1 1.9-1.9 5.1-1.9-5.1-5.1-1.9 5.1-1.9z" />
+    <path d="M18.5 16.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z" />
+  </S>
+)
+
+export const Eye = (p: IconProps) => (
+  <S {...p}>
+    <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" />
+    <circle cx="12" cy="12" r="3.1" />
+  </S>
+)
+
+export const Bold = (p: IconProps) => (
+  <S {...p} stroke={2.2}>
+    <path d="M7 4.5h6.2a3.75 3.75 0 0 1 0 7.5H7z" />
+    <path d="M7 12h7a3.75 3.75 0 0 1 0 7.5H7z" />
+  </S>
+)
+
+export const Italic = (p: IconProps) => (
+  <S {...p} stroke={2}>
+    <path d="M15.5 4.5h-5M13.5 19.5h-5M14.2 4.5L9.8 19.5" />
+  </S>
+)
+
+export const Underline = (p: IconProps) => (
+  <S {...p} stroke={2}>
+    <path d="M7 4.5v6.8a5 5 0 0 0 10 0V4.5" />
+    <path d="M5.5 20h13" />
+  </S>
+)
+
+export const Strike = (p: IconProps) => (
+  <S {...p} stroke={2}>
+    <path d="M4.5 12h15" />
+    <path d="M16.5 7.4C16 5.8 14.3 4.7 12 4.7c-2.6 0-4.4 1.3-4.4 3.2 0 1.5 1 2.6 3 3.2M7.5 16.4c.6 1.7 2.3 2.9 4.7 2.9 2.8 0 4.6-1.4 4.6-3.4 0-1.2-.6-2.2-1.8-2.9" />
+  </S>
+)
+
+export const CodeTag = (p: IconProps) => (
+  <S {...p}>
+    <path d="M9 8.5L5 12l4 3.5M15 8.5l4 3.5-4 3.5" />
+  </S>
+)
+
+export const Trash = (p: IconProps) => (
+  <S {...p}>
+    <path d="M4.5 7h15M9.5 7V5.2c0-.6.5-1.2 1.2-1.2h2.6c.7 0 1.2.6 1.2 1.2V7" />
+    <path d="M6.5 7l.9 11.6c.05.8.7 1.4 1.5 1.4h6.2c.8 0 1.45-.6 1.5-1.4L17.5 7" />
+    <path d="M10.5 11v5.5M13.5 11v5.5" />
+  </S>
+)
+

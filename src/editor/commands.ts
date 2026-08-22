@@ -219,10 +219,10 @@ export function setTextType(target: TextTypeTarget, level = 1): Command {
       case 'footer':
         return setBlockType(N.footer_block)(state, dispatch)
       case 'pullquote': {
-        // paragraph → pullquote; a second invocation turns it back
+        // a wrapper like the quote: wrap on the way in, lift on the way out
         const info = getBlockInfo(state)
-        if (info.type === 'pullquote') return setBlockType(N.paragraph)(state, dispatch)
-        return setBlockType(N.pullquote, { cite: null })(state, dispatch)
+        if (info.type === 'pullquote') return lift(state, dispatch)
+        return wrapIn(N.pullquote, { cite: null })(state, dispatch)
       }
       case 'quote':
         return wrapIn(N.blockquote)(state, dispatch)
@@ -363,7 +363,8 @@ function insertBlockNode(makeNode: () => Node | null, focusAfter = true): Comman
     if (dispatch) {
       const { $from } = state.selection
       const para = N.paragraph.create()
-      let after = $from.after(1) // top-level fallback
+      const topLevel = $from.after(1)
+      let after = topLevel
       for (let d = $from.depth; d >= 2; d--) {
         const container = $from.node(d - 1)
         if (container.type.name === 'table_cell' || container.type.name === 'table_header') {
@@ -378,13 +379,24 @@ function insertBlockNode(makeNode: () => Node | null, focusAfter = true): Comman
           break
         }
       }
-      let tr = state.tr.insert(after, node)
-      tr = tr.insert(after + node.nodeSize, para)
-      if (focusAfter) {
-        tr = tr.setSelection(TextSelection.near(tr.doc.resolve(after + node.nodeSize + 1)))
-      } else {
-        tr = tr.setSelection(TextSelection.near(tr.doc.resolve(after + 1)))
+
+      /** Insert at `pos`, returning null when the schema rejects it. */
+      const build = (pos: number) => {
+        try {
+          let tr = state.tr.insert(pos, node)
+          tr = tr.insert(pos + node.nodeSize, para)
+          const caret = focusAfter ? pos + node.nodeSize + 1 : pos + 1
+          return tr.setSelection(TextSelection.near(tr.doc.resolve(caret)))
+        } catch {
+          return null
+        }
       }
+
+      // Nested placement is the nice case; the top level always works, so
+      // an unusual container (checklist row, nested list…) can never make an
+      // insert silently fail.
+      const tr = build(after) ?? (after === topLevel ? null : build(topLevel))
+      if (!tr) return false
       dispatch(tr.scrollIntoView())
     }
     return true

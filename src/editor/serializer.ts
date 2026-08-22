@@ -189,8 +189,12 @@ function serializeBlock(node: Node): string {
     }
 
     case 'pullquote': {
+      let inner = ''
+      node.forEach((child) => {
+        inner += serializeBlock(child)
+      })
       const cite = node.attrs.cite ? `<cite>${escapeHtml(node.attrs.cite)}</cite>` : ''
-      return `<aside>${renderInline(node)}${cite}</aside>`
+      return `<aside>${inner}${cite}</aside>`
     }
 
     case 'code_block': {

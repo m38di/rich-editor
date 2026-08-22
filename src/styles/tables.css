@@ -1,0 +1,226 @@
+/* ══════════════════════════════════════════════════════════════════════
+   Tables — .re-table* selectors are produced by nodeviews.ts /
+   tableCommands.ts, so the names are part of the contract.
+   ══════════════════════════════════════════════════════════════════════ */
+
+.re-table {
+  width: 100%;
+  margin: 14px 0;
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: var(--r-md);
+  overflow: hidden;
+  background: var(--surface);
+  font-size: 14px;
+  line-height: 1.5;
+  table-layout: fixed;
+}
+
+.re-table td,
+.re-table th {
+  position: relative;
+  min-width: 0;
+  padding: 11px 14px;
+  border: 0;
+  text-align: left;
+  vertical-align: top;
+  background: var(--surface);
+  transition: background-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
+}
+
+.re-table th {
+  background: var(--surface-2);
+  font-weight: 680;
+  letter-spacing: -0.1px;
+}
+
+/* bordered */
+.re-table-bordered {
+  border: 1px solid var(--sep-strong);
+}
+.re-table-bordered td,
+.re-table-bordered th {
+  border-right: 1px solid var(--sep-strong);
+  border-bottom: 1px solid var(--sep-strong);
+}
+.re-table-bordered td:last-child,
+.re-table-bordered th:last-child {
+  border-right: 0;
+}
+.re-table-bordered tr:last-child td,
+.re-table-bordered tr:last-child th {
+  border-bottom: 0;
+}
+
+/* borderless */
+.re-table-borderless {
+  background: transparent;
+}
+.re-table-borderless td,
+.re-table-borderless th {
+  background: transparent;
+  border: 0;
+}
+
+/* striped */
+.re-table-striped tr:nth-child(even):not(:first-child) td,
+.re-table-striped tr:nth-child(even):not(:first-child) th {
+  background: var(--surface-2);
+}
+.re-table-striped tr:first-child th {
+  background: var(--surface-3);
+}
+.re-table-borderless.re-table-striped tr:nth-child(even) td {
+  background: var(--fill);
+}
+
+/* selection + focus */
+.ProseMirror.re-table-selecting,
+.ProseMirror.re-table-selecting * {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -webkit-touch-callout: none !important;
+  -webkit-user-drag: none !important;
+}
+.re-table-cell-active {
+  background: var(--accent-tint) !important;
+  box-shadow: inset 0 0 0 2px rgb(var(--c-accent) / 0.7);
+}
+.re-table td:focus-within,
+.re-table th:focus-within {
+  background: var(--accent-tint);
+  box-shadow: inset 0 0 0 2px rgb(var(--c-accent) / 0.75);
+}
+
+/* alignment attributes from the schema */
+.re-table td[align='center'],
+.re-table th[align='center'] {
+  text-align: center;
+}
+.re-table td[align='right'],
+.re-table th[align='right'] {
+  text-align: right;
+}
+.re-table td[valign='middle'],
+.re-table th[valign='middle'] {
+  vertical-align: middle;
+}
+.re-table td[valign='bottom'],
+.re-table th[valign='bottom'] {
+  vertical-align: bottom;
+}
+
+.re-table caption {
+  caption-side: top;
+  padding: 2px 8px 10px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13.5px;
+  font-weight: 650;
+  caret-color: var(--accent);
+}
+.re-table caption:empty::before {
+  content: 'Caption…';
+  color: var(--faint);
+  font-weight: 480;
+  pointer-events: none;
+}
+
+.re-table td > p,
+.re-table th > p {
+  margin: 0;
+}
+.re-table td > p + p,
+.re-table th > p + p {
+  margin-top: 6px;
+}
+
+/* rounded corners */
+.re-table tr:first-child th:first-child,
+.re-table tr:first-child td:first-child {
+  border-top-left-radius: var(--r-md);
+}
+.re-table tr:first-child th:last-child,
+.re-table tr:first-child td:last-child {
+  border-top-right-radius: var(--r-md);
+}
+.re-table tr:last-child td:first-child,
+.re-table tr:last-child th:first-child {
+  border-bottom-left-radius: var(--r-md);
+}
+.re-table tr:last-child td:last-child,
+.re-table tr:last-child th:last-child {
+  border-bottom-right-radius: var(--r-md);
+}
+
+/* ── host with row/column grab handles ───────────────────────────────── */
+
+.re-table-host {
+  position: relative;
+  margin: 14px 0;
+  padding: 2px 6px 28px 28px;
+}
+.re-table-host > table.re-table {
+  margin: 0;
+  box-shadow: var(--shadow-xs);
+}
+
+.re-table-handles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--dur) var(--ease);
+}
+.re-table-handles.on {
+  opacity: 1;
+}
+
+.re-th-dots {
+  position: absolute;
+  display: flex;
+  gap: 3px;
+  padding: 10px 9px;
+  pointer-events: auto;
+  cursor: pointer;
+}
+.re-th-dots.row {
+  left: 0;
+  top: 0;
+  transform: translateY(-50%);
+  flex-direction: column;
+}
+.re-th-dots.col {
+  bottom: 0;
+  transform: translateX(-50%);
+}
+.re-th-dots span {
+  width: 3.5px;
+  height: 3.5px;
+  border-radius: 50%;
+  background: var(--faint);
+  transition: background-color var(--dur-fast) ease;
+}
+.re-th-dots:hover span {
+  background: var(--accent);
+}
+.re-th-dots.sel span {
+  background: var(--accent-ink);
+}
+
+.re-th-bulge {
+  position: absolute;
+  border-radius: 999px;
+  background: var(--accent);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur) var(--ease);
+}
+.re-th-bulge.row {
+  left: 8px;
+  width: 14px;
+}
+.re-th-bulge.col {
+  bottom: 8px;
+  height: 14px;
+}

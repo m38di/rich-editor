@@ -104,10 +104,12 @@ const nodes: Record<string, NodeSpec> = {
     toDOM: () => ['blockquote', 0],
   },
 
-  // Pull quote (Android: italic centered + mini quote icons + author).
+  // Pull quote — structurally identical to a blockquote (a wrapper that
+  // holds whole blocks, so it can span many paragraphs); only the styling
+  // differs: centred and italic by default.
   pullquote: {
     attrs: { cite: { default: null } },
-    content: 'inline*',
+    content: 'block+',
     group: 'block',
     defining: true,
     parseDOM: [
@@ -235,7 +237,7 @@ const nodes: Record<string, NodeSpec> = {
           (el as HTMLElement).querySelector('li > input[type=checkbox]') ? null : false,
       },
     ],
-    toDOM: () => ['ul', { class: 'task-list' }, 0],
+    toDOM: () => ['ul', { class: 'task-list re-task-list' }, 0],
   },
   
   task_item: {
@@ -294,7 +296,11 @@ const nodes: Record<string, NodeSpec> = {
     content: 'inline*',
     defining: true,
     parseDOM: [{ tag: 'figcaption' }],
-    toDOM: () => ['figcaption', 0],
+    toDOM: () => [
+      'figcaption',
+      { class: 're-caption', 'data-placeholder': 'Caption…' },
+      0,
+    ],
   },
 
   // Single media block (Android: MediaBlock mode=single). `kind` audio uses

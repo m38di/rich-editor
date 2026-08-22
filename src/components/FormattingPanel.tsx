@@ -74,7 +74,7 @@ export function FormattingPanel({ info, run, onOpenLink, onOpenDate, onOpenMath 
   ]
 
   return (
-    <div className="ios-format ios-vibrancy pointer-events-auto animate-pop-in">
+    <div className="fmt-bar animate-pop-in">
       {groups.map((group, gi) => (
         <div key={gi} className="flex items-center">
           {gi > 0 && <span className="fmt-sep" aria-hidden />}

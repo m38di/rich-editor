@@ -1,11 +1,11 @@
 // src/components/PreviewSheet.tsx
 //
-// The messaging replacement, iOS-style: a full-screen sheet with a
-// segmented Preview ⇄ HTML switch, Copy and Download actions.
+// Full-screen result view: a segmented Preview ⇄ HTML switch, copy and
+// download actions, and the document's size at a glance.
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { copyToClipboard, downloadHtml, slugify } from '../editor/exportHtml'
-import { Download, Copy } from './icons'
+import { Download, Copy, Xmark, Check } from './icons'
 
 interface PreviewSheetProps {
   title: string
@@ -15,85 +15,105 @@ interface PreviewSheetProps {
   notify: (t: string) => void
 }
 
-export function PreviewSheet({ title, fragment, standalone, onClose, notify }: PreviewSheetProps) {
+export function PreviewSheet({
+  title,
+  fragment,
+  standalone,
+  onClose,
+  notify,
+}: PreviewSheetProps) {
   const [tab, setTab] = useState<'preview' | 'html'>('preview')
   const [copied, setCopied] = useState(false)
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
 
   const copy = async () => {
     const ok = await copyToClipboard(fragment)
     setCopied(ok)
     notify(ok ? 'HTML fragment copied' : 'Copy failed — select and copy manually')
-    setTimeout(() => setCopied(false), 1600)
+    setTimeout(() => setCopied(false), 1800)
   }
 
   const download = () => {
-    downloadHtml(`${slugify(title)}.html`, fragment)
+    downloadHtml(`${slugify(title)}.html`, standalone)
     notify('Downloading standalone .html')
   }
 
   return (
-    <div className="full-sheet" role="dialog" aria-label="Generated HTML">
-      {/* header */}
-      <div className="ios-vibrancy border-b border-ios-sep px-2 pb-2 pt-[calc(8px+env(safe-area-inset-top))]">
-        <div className="mx-auto flex max-w-[720px] items-center">
-          <button type="button" className="sheet-action" onClick={onClose}>
-            Done
-          </button>
-          <div className="flex flex-1 justify-center">
-            <div className="ios-seg">
-              <button type="button" className={tab === 'preview' ? 'on' : ''} onClick={() => setTab('preview')}>
-                Preview
-              </button>
-              <button type="button" className={tab === 'html' ? 'on' : ''} onClick={() => setTab('html')}>
-                HTML
-              </button>
-            </div>
-          </div>
-          <button type="button" className="ios-icon-btn" onClick={download} title="Download .html" aria-label="Download .html">
-            <Download size={21} />
-          </button>
-        </div>
-        <div className="mx-auto max-w-[720px] truncate px-16 text-center text-[11px] font-medium text-ios-secondary">
-          {title} · {(fragment.length / 1024).toFixed(1)} KB · reference tags only
-        </div>
-      </div>
+    <div className="full-sheet" role="dialog" aria-modal="true" aria-label="Generated HTML">
+      <header className="app-bar">
+        <button
+          type="button"
+          className="icon-btn"
+          onClick={onClose}
+          title="Close"
+          aria-label="Close preview"
+        >
+          <Xmark size={19} />
+        </button>
 
-      {/* body */}
+        <span className="min-w-0">
+          <span className="brand-title block truncate">{title}</span>
+          <span className="brand-sub block">
+            {(new Blob([standalone]).size / 1024).toFixed(1)} KB · semantic HTML
+          </span>
+        </span>
+
+        <div className="flex-1" />
+
+        <div className="ios-seg">
+          <button
+            type="button"
+            className={tab === 'preview' ? 'on' : ''}
+            onClick={() => setTab('preview')}
+          >
+            Preview
+          </button>
+          <button
+            type="button"
+            className={tab === 'html' ? 'on' : ''}
+            onClick={() => setTab('html')}
+          >
+            HTML
+          </button>
+        </div>
+
+        <div className="flex-1" />
+
+        <button type="button" onClick={copy} className="pill-btn" title="Copy the HTML fragment">
+          {copied ? <Check size={15} /> : <Copy size={15} />}
+          <span className="hidden sm:inline">{copied ? 'Copied' : 'Copy'}</span>
+        </button>
+        <button
+          type="button"
+          onClick={download}
+          className="pill-btn primary ml-1.5"
+          title="Download a standalone .html file"
+        >
+          <Download size={15} />
+          <span className="hidden sm:inline">Download</span>
+        </button>
+      </header>
+
       <div className="min-h-0 flex-1">
         {tab === 'preview' ? (
           <iframe
             title="HTML preview"
-            className="h-full w-full border-0 bg-ios-grouped"
+            className="h-full w-full border-0 bg-ios-canvas"
             srcDoc={standalone}
             sandbox="allow-same-origin allow-scripts"
           />
         ) : (
-          <pre className="h-full w-full overflow-auto whitespace-pre-wrap bg-white p-4 font-mono text-[12.5px] leading-relaxed text-ios-label">
+          <pre className="h-full w-full overflow-auto whitespace-pre-wrap bg-ios-card p-5 font-mono text-[12.5px] leading-relaxed text-ios-label">
             {fragment}
           </pre>
         )}
-      </div>
-
-      {/* footer actions */}
-      <div className="ios-vibrancy border-t border-ios-sep px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-2.5">
-        <div className="mx-auto flex max-w-[720px] items-center justify-end gap-2">
-          <button
-            type="button"
-            onClick={copy}
-            className="press flex items-center gap-2 rounded-full bg-ios-fill px-4 py-2.5 text-[14px] font-semibold text-ios-label"
-          >
-            <Copy size={16} />
-            {copied ? 'Copied' : 'Copy HTML'}
-          </button>
-          <button
-            type="button"
-            onClick={download}
-            className="press flex items-center gap-2 rounded-full bg-ios-blue px-5 py-2.5 text-[14px] font-semibold text-white shadow-send"
-          >
-            <Download size={16} />
-            Download .html
-          </button>
-        </div>
       </div>
     </div>
   )

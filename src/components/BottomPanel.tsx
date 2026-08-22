@@ -1,7 +1,6 @@
-// src/components/BottomPanel.tsx — Telegram iOS compose bar with the
-// widget's own drawables: outline_poll_attach_24 (+), iv_text2 (Aa),
-// iv_lists, iv_table, iv_math — and the classic send_plane_24 as the
-// blue Generate button.
+// src/components/BottomPanel.tsx — the compact dock shown on small screens:
+// insert, pickers, live block label and the blue Generate button. On desktop
+// the Ribbon takes over and this component is hidden.
 
 import { SelectionInfo } from '../editor/plugins'
 import { Iv } from './ivIcons'
@@ -16,11 +15,18 @@ interface BottomPanelProps {
   onGenerate: () => void
   onInsertTable: () => void
   keyboardHeight: number
-  /** menus + formatting strip render here, floating above the bar */
-  children?: React.ReactNode
+  className?: string
 }
 
-export function BottomPanel({ info, openMenu, onToggleMenu, onGenerate, onInsertTable, keyboardHeight, children }: BottomPanelProps) {
+export function BottomPanel({
+  info,
+  openMenu,
+  onToggleMenu,
+  onGenerate,
+  onInsertTable,
+  keyboardHeight,
+  className = '',
+}: BottomPanelProps) {
   const item = (id: MenuId, label: string, glyph: React.ReactNode) => (
     <button
       key={id}
@@ -36,43 +42,36 @@ export function BottomPanel({ info, openMenu, onToggleMenu, onGenerate, onInsert
   )
 
   return (
-    <div className="ios-toolbar ios-vibrancy" style={{ bottom: keyboardHeight }}>
-      {/* floating slot above the bar */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-full z-20 flex flex-col items-center gap-2 px-3 pb-2">
-        {children}
-      </div>
-
-      <div className="mx-auto flex max-w-[720px] items-center gap-0.5">
+    <div className={`dock ${className}`} style={{ bottom: keyboardHeight }}>
+      <div className="dock-row">
         <button
           type="button"
           title="Insert block"
           aria-label="Insert block"
           aria-expanded={openMenu === 'attach'}
           onClick={() => onToggleMenu('attach')}
-          className="attach-btn mr-1"
+          className="attach-btn mr-1.5"
         >
-          <Iv name="outline_poll_attach_24" size={20} />
+          <Iv name="outline_poll_attach_24" size={19} />
         </button>
 
-        {item('emoji', 'Emoji', <Smiley size={23} />)}
-        {item('text', 'Text style', <Iv name="text2" size={21} />)}
-        {item('list', 'Lists', <Iv name="lists" size={21} />)}
+        {item('text', 'Text style', <Iv name="text2" size={20} />)}
+        {item('list', 'Lists', <Iv name="lists" size={20} />)}
         <button
           type="button"
-          title="Insert 2×2 table"
-          aria-label="Insert 2×2 table"
-          onClick={onInsertTable}
-          className={`tool-btn ${info.inTable ? 'on' : ''}`}
+          title={info.inTable ? 'Table options' : 'Insert 2×2 table'}
+          aria-label="Table"
+          onClick={() => (info.inTable ? onToggleMenu('table') : onInsertTable())}
+          className={`tool-btn ${info.inTable || openMenu === 'table' ? 'on' : ''}`}
         >
-          <Iv name="table" size={20} />
+          <Iv name="table" size={19} />
         </button>
-        {item('math', 'Math', <Iv name="math" size={21} />)}
+        {item('math', 'Math', <Iv name="math" size={20} />)}
+        {item('emoji', 'Custom emoji', <Smiley size={22} />)}
 
         <div className="flex-1" />
 
-        <span className="mr-2 hidden text-[12px] font-medium text-ios-secondary sm:block">
-          {labelFor(info)}
-        </span>
+        <span className="stat-chip mr-2 hidden sm:inline-flex">{labelFor(info)}</span>
 
         <button
           type="button"
@@ -81,14 +80,14 @@ export function BottomPanel({ info, openMenu, onToggleMenu, onGenerate, onInsert
           aria-label="Generate HTML"
           className="send-btn"
         >
-          <Iv name="send_plane_24" size={19} />
+          <Iv name="send_plane_24" size={18} />
         </button>
       </div>
     </div>
   )
 }
 
-function labelFor(info: SelectionInfo): string {
+export function labelFor(info: SelectionInfo): string {
   if (info.block.inList === 'bullet') return 'List'
   if (info.block.inList === 'ordered') return 'Numbered'
   if (info.block.inList === 'task') return 'Checklist'
@@ -106,6 +105,6 @@ function labelFor(info: SelectionInfo): string {
     case 'table':
       return 'Table'
     default:
-      return 'Text'
+      return 'Paragraph'
   }
 }

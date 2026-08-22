@@ -57,21 +57,29 @@ function stopEventOnInputs(event: Event): boolean {
 }
 
 /**
- * Mousedown → caret for empty node-view captions (figcaption contentDOM).
- * PM's posAtCoords cannot map a point on an empty inline node view, so the
- * click would fall through to a neighbouring block. Place the caret at the
- * caption start ourselves instead.
+ * Mousedown → caret inside a media caption.
+ *
+ * The caption lives in an optional `fig_caption` child, so two things can go
+ * wrong: the media node may have no caption node yet (nothing to put a caret
+ * in), and PM's posAtCoords cannot map a point inside an empty node view.
+ * Create the caption on demand, then place the caret at its start.
  */
-function captionCaretHandler(view: EditorView, contentDOM: HTMLElement) {
+function captionCaretHandler(view: EditorView, getPos: GetPos) {
   return (e: MouseEvent) => {
     if ((e.target as HTMLElement).closest?.('button, input')) return
     e.preventDefault()
     e.stopPropagation()
     try {
-      const pos = view.posAtDOM(contentDOM, 0)
-      const $pos = view.state.doc.resolve(pos + 1) // inside the fig_caption
+      const pos = getPos()
+      const node = view.state.doc.nodeAt(pos)
+      if (!node) return
+
+      let tr = view.state.tr
+      const inside = pos + 1
+      if (node.childCount === 0) tr = tr.insert(inside, N.fig_caption.create())
+
       view.focus()
-      view.dispatch(view.state.tr.setSelection(TextSelection.near($pos)))
+      view.dispatch(tr.setSelection(TextSelection.near(tr.doc.resolve(inside + 1))))
     } catch {
       /* unmapped — let ProseMirror fall back */
     }
@@ -94,10 +102,9 @@ class MediaFigureView implements NodeView {
     this.node = node
     this.dom = el('figure', 're-media')
     this.frame = el('div', 're-media-frame')
-    this.contentDOM = el('figcaption', 're-caption')
-    this.contentDOM.setAttribute('data-placeholder', 'Caption…')
+    this.contentDOM = el('div', 're-caption-slot')
     this.dom.append(this.frame, this.contentDOM)
-    this.contentDOM.addEventListener('mousedown', captionCaretHandler(view, this.contentDOM))
+    this.contentDOM.addEventListener('mousedown', captionCaretHandler(view, getPos))
     this.dom.addEventListener('click', (e) => {
       if ((e.target as HTMLElement).closest('.re-media-btn')) e.preventDefault()
     })
@@ -248,8 +255,7 @@ class MediaGroupView implements NodeView {
     this.dots = el('div', 're-gallery-pagerdots')
     this.stage.append(this.dots)
 
-    this.contentDOM = el('figcaption', 're-caption')
-    this.contentDOM.setAttribute('data-placeholder', 'Caption…')
+    this.contentDOM = el('div', 're-caption-slot')
 
     this.addBtn = el('button', 're-gal-circle re-gal-add') as HTMLButtonElement
     this.addBtn.type = 'button'
@@ -274,7 +280,7 @@ class MediaGroupView implements NodeView {
     }
 
     this.dom.append(this.stage, this.addBtn, this.switchBtn, this.contentDOM)
-    this.contentDOM.addEventListener('mousedown', captionCaretHandler(view, this.contentDOM))
+    this.contentDOM.addEventListener('mousedown', captionCaretHandler(view, getPos))
 
     this.stage.addEventListener('pointerdown', (e) => this.onPointerDown(e))
     this.stage.addEventListener('click', () => {
@@ -663,10 +669,9 @@ class MapView implements NodeView {
     this.node = node
     this.dom = el('figure', 're-map-figure')
     this.box = el('div', 're-map re-stop')
-    this.contentDOM = el('figcaption', 're-caption')
-    this.contentDOM.setAttribute('data-placeholder', 'Caption…')
+    this.contentDOM = el('div', 're-caption-slot')
     this.dom.append(this.box, this.contentDOM)
-    this.contentDOM.addEventListener('mousedown', captionCaretHandler(view, this.contentDOM))
+    this.contentDOM.addEventListener('mousedown', captionCaretHandler(view, getPos))
     this.box.onclick = () => bus.emit('dialog:map', { pos: this.getPos() })
     this.render()
   }
@@ -1344,7 +1349,7 @@ class TableView implements NodeView {
     if (!cells.length) return
     this.dotRow = activeRow
     this.view.dispatch(
-      this.view.state.tr.setMeta(tableSelectionKey, { cells, multi: true }),
+      this.view.state.tr.setMeta(tableSelectionKey, { cells, multi: true, menu: true }),
     )
   }
 
@@ -1404,7 +1409,7 @@ class TableView implements NodeView {
     if (!cells.length) return
     this.dotCol = activeCol
     this.view.dispatch(
-      this.view.state.tr.setMeta(tableSelectionKey, { cells, multi: true }),
+      this.view.state.tr.setMeta(tableSelectionKey, { cells, multi: true, menu: true }),
     )
   }
 

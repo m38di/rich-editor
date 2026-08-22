@@ -205,6 +205,14 @@ export interface TableCellSelection {
 export interface TableSelectionState {
   cells: TableCellSelection[]
   multi: boolean
+  /**
+   * Whether this selection should open the cell menu. Only deliberate
+   * "show me the options" gestures set it — right-click, long-press, the
+   * row/column handles and the end of a drag selection. Ctrl+click keeps
+   * building the selection silently, so dismissing the menu can never wipe
+   * what the user just selected.
+   */
+  menu?: boolean
 }
 
 export const tableSelectionKey =
@@ -217,6 +225,18 @@ export function clearTableSelection(view: EditorView): void {
       cells: [],
       multi: false,
     }),
+  )
+}
+
+/**
+ * Close the cell menu but keep the cells selected — dismissing the menu is
+ * not the same as abandoning the selection.
+ */
+export function dismissTableMenu(view: EditorView): void {
+  const current = tableSelectionKey.getState(view.state)
+  if (!current || !current.menu) return
+  view.dispatch(
+    view.state.tr.setMeta(tableSelectionKey, { ...current, menu: false }),
   )
 }
 
@@ -299,6 +319,11 @@ let longPressTimer: ReturnType<typeof setTimeout> | null = null
 let longPressTriggered = false
 let suppressTableContextMenu = false
 
+/** Cell the current touch started on — the drag-selection anchor. */
+let dragAnchor: TableCellSelection | null = null
+/** True once a touch drag has crossed into a second cell. */
+let dragSelecting = false
+
 let touchStartX = 0
 let touchStartY = 0
 
@@ -343,6 +368,7 @@ export const tableSelectionPlugin = () =>
 
     view: () => {
       let lastSig = ''
+      let lastMenuSig = ''
       return {
         update: (view) => {
           const s = tableSelectionKey.getState(view.state)
@@ -353,12 +379,16 @@ export const tableSelectionPlugin = () =>
             // Fine-grained: every selection change (single active cell too) —
             // drives the TableView row/column dot handles.
             bus.emit('table:selection', positions)
-            // Auto-show/hide the cell menu (Android: cellSelectionListener →
-            // showTableCellMenu / exitCellSelectionMode).
-            bus.emit(
-              'table:menu',
-              s && s.multi && positions.length > 0 ? positions : null,
-            )
+          }
+
+          // The menu only follows deliberate gestures, so building a
+          // selection with Ctrl+click never pops it up and dismissing it
+          // never destroys the selection.
+          const wantsMenu = !!(s && s.multi && s.menu && positions.length > 0)
+          const menuSig = wantsMenu ? sig : ''
+          if (menuSig !== lastMenuSig) {
+            lastMenuSig = menuSig
+            bus.emit('table:menu', wantsMenu ? positions : null)
           }
         },
       }
@@ -482,6 +512,7 @@ export const tableSelectionPlugin = () =>
                 {
                   cells: [cell],
                   multi: true,
+                  menu: true,
                 },
               ),
             )
@@ -585,58 +616,62 @@ export const tableSelectionPlugin = () =>
 
         touchstart(view, event) {
           const e = event as TouchEvent
-        
+
           if (e.touches.length !== 1) {
             clearLongPress()
             return false
           }
-        
+
           const touch = e.touches[0]
-        
+
           const cell = getTableCellAtPoint(
             view,
             touch.clientX,
             touch.clientY,
           )
-        
+
           if (!cell) {
             clearLongPress()
+            dragAnchor = null
             return false
           }
-        
+
           clearLongPress()
-        
+
           longPressTriggered = false
+          dragSelecting = false
+          dragAnchor = cell
           suppressTableContextMenu = false
-        
+
           touchStartX = touch.clientX
           touchStartY = touch.clientY
-        
+
           longPressTimer = setTimeout(() => {
             longPressTriggered = true
             suppressTableContextMenu = true
-        
+
             // Stop the browser from owning the selection.
             const selection = window.getSelection()
             selection?.removeAllRanges()
-        
+
             view.dom.classList.add('re-table-selecting')
-        
+
             const current =
               tableSelectionKey.getState(view.state)
-        
+
             const cells = current?.cells ?? []
-        
+
             const next = containsCell(cells, cell.pos)
               ? cells
               : [...cells, cell]
-        
+
             view.dispatch(
               view.state.tr.setMeta(
                 tableSelectionKey,
                 {
                   cells: next,
                   multi: true,
+                  menu: true,
                 },
               ),
             )
@@ -647,47 +682,74 @@ export const tableSelectionPlugin = () =>
         
         touchmove(view, event) {
           const e = event as TouchEvent
-        
+
           if (e.touches.length !== 1) {
             clearLongPress()
             return false
           }
-        
+
           const touch = e.touches[0]
-        
+
           const dx = touch.clientX - touchStartX
           const dy = touch.clientY - touchStartY
-        
-          if (!longPressTriggered) {
-            if (
-              Math.abs(dx) > 10 ||
-              Math.abs(dy) > 10
-            ) {
-              clearLongPress()
-            }
-        
-            return false
-          }
-        
-          // Our table-selection gesture owns the touch now.
-          event.preventDefault()
-        
-          // Continuously kill native text selection while selecting cells.
-          window.getSelection()?.removeAllRanges()
-        
+          const moved = Math.abs(dx) > 12 || Math.abs(dy) > 12
+
           const cell = getTableCellAtPoint(
             view,
             touch.clientX,
             touch.clientY,
           )
-        
+
+          /*
+           * DRAG SELECTION (mobile)
+           *
+           * Dragging from one cell into another starts cell selection right
+           * away — no long-press needed. A drag that stays inside the anchor
+           * cell is left alone so ordinary scrolling and text selection keep
+           * working.
+           */
+          if (!longPressTriggered && !dragSelecting) {
+            if (!moved) return false
+
+            if (
+              !dragAnchor ||
+              !cell ||
+              cell.pos === dragAnchor.pos
+            ) {
+              // scrolling, or still inside the starting cell
+              clearLongPress()
+              return false
+            }
+
+            clearLongPress()
+            dragSelecting = true
+            view.dom.classList.add('re-table-selecting')
+            window.getSelection()?.removeAllRanges()
+
+            view.dispatch(
+              view.state.tr.setMeta(tableSelectionKey, {
+                cells: [dragAnchor, cell],
+                multi: true,
+              }),
+            )
+
+            event.preventDefault()
+            return true
+          }
+
+          // Our table-selection gesture owns the touch now.
+          event.preventDefault()
+
+          // Continuously kill native text selection while selecting cells.
+          window.getSelection()?.removeAllRanges()
+
           if (!cell) {
             return true
           }
-        
+
           const current =
             tableSelectionKey.getState(view.state)
-        
+
           if (
             current &&
             !containsCell(current.cells, cell.pos)
@@ -701,49 +763,82 @@ export const tableSelectionPlugin = () =>
                     cell,
                   ],
                   multi: true,
+                  menu: current.menu,
                 },
               ),
             )
           }
-        
+
           return true
         },
-        
+
         touchend(view) {
           clearLongPress()
-        
+
+          /*
+           * A drag selection is finished — reveal the cell menu once, and
+           * keep the cells selected while it is open.
+           */
+          if (dragSelecting) {
+            dragSelecting = false
+            dragAnchor = null
+            suppressTableContextMenu = true
+            view.dom.classList.remove('re-table-selecting')
+
+            const current = tableSelectionKey.getState(view.state)
+            if (current && current.cells.length > 0) {
+              view.dispatch(
+                view.state.tr.setMeta(tableSelectionKey, {
+                  ...current,
+                  multi: true,
+                  menu: true,
+                }),
+              )
+            }
+
+            setTimeout(() => {
+              suppressTableContextMenu = false
+            }, 400)
+
+            return true
+          }
+
+          dragAnchor = null
+
           if (!longPressTriggered) {
             suppressTableContextMenu = false
             return false
           }
-        
+
           // Keep the cell selection.
           longPressTriggered = false
-        
+
           view.dom.classList.remove(
             're-table-selecting',
           )
-        
+
           // Do NOT immediately clear this.
           // iOS can fire contextmenu shortly after touchend.
           setTimeout(() => {
             suppressTableContextMenu = false
           }, 400)
-        
+
           return true
         },
-        
+
         touchcancel(view) {
           clearLongPress()
-        
+
           longPressTriggered = false
-        
+          dragSelecting = false
+          dragAnchor = null
+
           view.dom.classList.remove(
             're-table-selecting',
           )
-        
+
           suppressTableContextMenu = false
-        
+
           return false
         },
         
@@ -767,7 +862,12 @@ export const tableSelectionPlugin = () =>
                 view.state.tr.setMeta(tableSelectionKey, {
                   cells: [cell],
                   multi: true,
+                  menu: true,
                 }),
+              )
+            } else if (!current.menu) {
+              view.dispatch(
+                view.state.tr.setMeta(tableSelectionKey, { ...current, menu: true }),
               )
             }
             return true
