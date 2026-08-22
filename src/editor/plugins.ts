@@ -305,6 +305,7 @@ function toggleCell(
 
 let longPressTimer: ReturnType<typeof setTimeout> | null = null
 let longPressTriggered = false
+let longPressTable: HTMLElement | null = null
 let draggingCells = false
 let touchStartX = 0
 let touchStartY = 0
@@ -602,6 +603,10 @@ export const tableSelectionPlugin = () =>
         
           const touch = e.touches[0]
         
+          const target = e.target instanceof Element
+            ? e.target
+            : null
+        
           const cell = getTableCellAtPoint(
             view,
             touch.clientX,
@@ -610,17 +615,22 @@ export const tableSelectionPlugin = () =>
         
           if (!cell) {
             clearLongPress()
+            longPressTable = null
             return false
           }
+        
+          const table = target?.closest('table.re-table') as HTMLElement | null
         
           clearLongPress()
         
           longPressTriggered = false
+          longPressTable = table
         
           touchStartX = touch.clientX
           touchStartY = touch.clientY
         
           longPressTimer = setTimeout(() => {
+            longPressTimer = null
             longPressTriggered = true
         
             const current =
@@ -633,18 +643,29 @@ export const tableSelectionPlugin = () =>
               : [...cells, cell]
         
             view.dispatch(
-              view.state.tr.setMeta(tableSelectionKey, {
-                cells: next,
-                multi: true,
-              }),
+              view.state.tr.setMeta(
+                tableSelectionKey,
+                {
+                  cells: next,
+                  multi: true,
+                },
+              ),
             )
         
-            view.dom.classList.add('re-table-selecting')
+            if (longPressTable) {
+              longPressTable.classList.add(
+                're-table-selecting',
+              )
+            }
+        
+            view.dom.classList.add(
+              're-table-selecting',
+            )
           }, 500)
         
           return false
         },
-
+        
         touchmove(view, event) {
           const e = event as TouchEvent
         
@@ -655,21 +676,35 @@ export const tableSelectionPlugin = () =>
         
           const touch = e.touches[0]
         
-          const dx = touch.clientX - touchStartX
-          const dy = touch.clientY - touchStartY
+          const dx =
+            touch.clientX - touchStartX
         
-          // Before long press: let normal page scrolling happen.
+          const dy =
+            touch.clientY - touchStartY
+        
+          /*
+           * Before long press:
+           *
+           * Let the browser scroll normally.
+           */
           if (!longPressTriggered) {
-            if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
+            if (
+              Math.abs(dx) > 10 ||
+              Math.abs(dy) > 10
+            ) {
               clearLongPress()
+              longPressTable = null
             }
         
             return false
           }
         
-          // AFTER long press:
-          // this finger movement belongs to cell selection,
-          // NOT browser scrolling/text selection.
+          /*
+           * Long press has activated cell selection.
+           *
+           * From this point onward this gesture belongs
+           * completely to our cell selector.
+           */
           event.preventDefault()
           event.stopPropagation()
         
@@ -688,54 +723,84 @@ export const tableSelectionPlugin = () =>
         
           if (
             current &&
-            !containsCell(current.cells, cell.pos)
+            !containsCell(
+              current.cells,
+              cell.pos,
+            )
           ) {
             view.dispatch(
-              view.state.tr.setMeta(tableSelectionKey, {
-                cells: [...current.cells, cell],
-                multi: true,
-              }),
+              view.state.tr.setMeta(
+                tableSelectionKey,
+                {
+                  cells: [
+                    ...current.cells,
+                    cell,
+                  ],
+                  multi: true,
+                },
+              ),
             )
           }
         
           return true
         },
-
-        touchend(view) {
+        
+        touchend(view, event) {
           clearLongPress()
-
+        
           if (longPressTriggered) {
-            view.dom.classList.remove('re-table-selecting')
+            event.preventDefault()
+            event.stopPropagation()
+        
             longPressTriggered = false
-            return false
+        
+            if (longPressTable) {
+              longPressTable.classList.remove(
+                're-table-selecting',
+              )
+            }
+        
+            view.dom.classList.remove(
+              're-table-selecting',
+            )
+        
+            longPressTable = null
+        
+            return true
           }
-
+        
+          longPressTable = null
+        
           return false
         },
-
-        touchcancel(view) {
+        
+        touchcancel(view, event) {
           clearLongPress()
-
+        
           longPressTriggered = false
-
+        
+          if (longPressTable) {
+            longPressTable.classList.remove(
+              're-table-selecting',
+            )
+          }
+        
           view.dom.classList.remove(
             're-table-selecting',
           )
-
+        
+          longPressTable = null
+        
           return false
         },
-
-        /*
-         * Prevent iOS/Android's long-press context menu
-         * only when OUR long press has already activated.
-         */
+        
         contextmenu(view, event) {
           if (longPressTriggered) {
             event.preventDefault()
             event.stopPropagation()
             return true
           }
-
+        
           return false
         },
       },
