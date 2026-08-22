@@ -312,8 +312,8 @@ function clearNativeTextSelection() {
 
 let longPressTimer: ReturnType<typeof setTimeout> | null = null
 let longPressTriggered = false
-let longPressTable: HTMLElement | null = null
-let draggingCells = false
+let suppressTableContextMenu = false
+
 let touchStartX = 0
 let touchStartY = 0
 
@@ -623,28 +623,30 @@ export const tableSelectionPlugin = () =>
           clearLongPress()
         
           longPressTriggered = false
+          suppressTableContextMenu = false
         
           touchStartX = touch.clientX
           touchStartY = touch.clientY
         
           longPressTimer = setTimeout(() => {
             longPressTriggered = true
-            clearNativeTextSelection()
-            // Kill the browser's native text selection/caret.
+            suppressTableContextMenu = true
+        
+            // Stop the browser from owning the selection.
             const selection = window.getSelection()
-          
-            // Tell the browser that this gesture is now ours.
-            view.dom.classList.add('re-table-cell-selecting')
-          
+            selection?.removeAllRanges()
+        
+            view.dom.classList.add('re-table-selecting')
+        
             const current =
               tableSelectionKey.getState(view.state)
-          
+        
             const cells = current?.cells ?? []
-          
+        
             const next = containsCell(cells, cell.pos)
               ? cells
               : [...cells, cell]
-          
+        
             view.dispatch(
               view.state.tr.setMeta(
                 tableSelectionKey,
@@ -672,21 +674,23 @@ export const tableSelectionPlugin = () =>
           const dx = touch.clientX - touchStartX
           const dy = touch.clientY - touchStartY
         
-          // Normal finger movement before long-press:
-          // this MUST remain completely native so the page can scroll.
           if (!longPressTriggered) {
-            if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
+            if (
+              Math.abs(dx) > 10 ||
+              Math.abs(dy) > 10
+            ) {
               clearLongPress()
             }
-          
+        
             return false
           }
-          
-          // Cell selection owns the gesture now.
+        
+          // Our table-selection gesture owns the touch now.
           event.preventDefault()
-          
-          clearNativeTextSelection()
-                  
+        
+          // Continuously kill native text selection while selecting cells.
+          window.getSelection()?.removeAllRanges()
+        
           const cell = getTableCellAtPoint(
             view,
             touch.clientX,
@@ -700,11 +704,10 @@ export const tableSelectionPlugin = () =>
           const current =
             tableSelectionKey.getState(view.state)
         
-          if (!current) {
-            return true
-          }
-        
-          if (!containsCell(current.cells, cell.pos)) {
+          if (
+            current &&
+            !containsCell(current.cells, cell.pos)
+          ) {
             view.dispatch(
               view.state.tr.setMeta(
                 tableSelectionKey,
@@ -726,14 +729,22 @@ export const tableSelectionPlugin = () =>
           clearLongPress()
         
           if (!longPressTriggered) {
+            suppressTableContextMenu = false
             return false
           }
         
+          // Keep the cell selection.
           longPressTriggered = false
         
           view.dom.classList.remove(
-            're-table-cell-selecting',
+            're-table-selecting',
           )
+        
+          // Do NOT immediately clear this.
+          // iOS can fire contextmenu shortly after touchend.
+          setTimeout(() => {
+            suppressTableContextMenu = false
+          }, 400)
         
           return true
         },
@@ -744,14 +755,16 @@ export const tableSelectionPlugin = () =>
           longPressTriggered = false
         
           view.dom.classList.remove(
-            're-table-cell-selecting',
+            're-table-selecting',
           )
+        
+          suppressTableContextMenu = false
         
           return false
         },
         
         contextmenu(view, event) {
-          if (longPressTriggered) {
+          if (suppressTableContextMenu || longPressTriggered) {
             event.preventDefault()
             event.stopPropagation()
             return true
