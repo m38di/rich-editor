@@ -301,6 +301,13 @@ function toggleCell(
   return [...cells, cell]
 }
 
+function clearNativeTextSelection() {
+  const selection = window.getSelection()
+  if (selection && !selection.isCollapsed) {
+    selection.removeAllRanges()
+  }
+}
+
 // ── mobile long press state ────────────────────────────────────────────
 
 let longPressTimer: ReturnType<typeof setTimeout> | null = null
@@ -622,7 +629,7 @@ export const tableSelectionPlugin = () =>
         
           longPressTimer = setTimeout(() => {
             longPressTriggered = true
-          
+            clearNativeTextSelection()
             // Kill the browser's native text selection/caret.
             const selection = window.getSelection()
             selection?.removeAllRanges()
