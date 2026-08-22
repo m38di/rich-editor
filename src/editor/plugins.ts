@@ -621,21 +621,24 @@ export const tableSelectionPlugin = () =>
           touchStartY = touch.clientY
         
           longPressTimer = setTimeout(() => {
-            longPressTimer = null
             longPressTriggered = true
-        
+          
+            // Kill the browser's native text selection/caret.
+            const selection = window.getSelection()
+            selection?.removeAllRanges()
+          
+            // Tell the browser that this gesture is now ours.
+            view.dom.classList.add('re-table-cell-dragging')
+          
             const current =
               tableSelectionKey.getState(view.state)
-        
+          
             const cells = current?.cells ?? []
-        
-            const next = containsCell(
-              cells,
-              cell.pos,
-            )
+          
+            const next = containsCell(cells, cell.pos)
               ? cells
               : [...cells, cell]
-        
+          
             view.dispatch(
               view.state.tr.setMeta(
                 tableSelectionKey,
@@ -644,10 +647,6 @@ export const tableSelectionPlugin = () =>
                   multi: true,
                 },
               ),
-            )
-        
-            view.dom.classList.add(
-              're-table-cell-dragging',
             )
           }, 500)
         
@@ -673,12 +672,14 @@ export const tableSelectionPlugin = () =>
             if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
               clearLongPress()
             }
-        
+          
             return false
           }
-        
-          // Long press has turned this gesture into cell selection.
-          e.preventDefault()
+          
+          // We own the gesture now.
+          event.preventDefault()
+          
+          window.getSelection()?.removeAllRanges()
         
           const cell = getTableCellAtPoint(
             view,
