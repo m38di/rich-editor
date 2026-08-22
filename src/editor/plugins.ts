@@ -305,6 +305,7 @@ function toggleCell(
 
 let longPressTimer: ReturnType<typeof setTimeout> | null = null
 let longPressTriggered = false
+let draggingCells = false
 let touchStartX = 0
 let touchStartY = 0
 
@@ -593,143 +594,110 @@ export const tableSelectionPlugin = () =>
 
         touchstart(view, event) {
           const e = event as TouchEvent
-
+        
           if (e.touches.length !== 1) {
             clearLongPress()
             return false
           }
-
+        
           const touch = e.touches[0]
-
+        
           const cell = getTableCellAtPoint(
             view,
             touch.clientX,
             touch.clientY,
           )
-
+        
           if (!cell) {
             clearLongPress()
             return false
           }
-
+        
           clearLongPress()
-
+        
           longPressTriggered = false
-
+        
           touchStartX = touch.clientX
           touchStartY = touch.clientY
-
+        
           longPressTimer = setTimeout(() => {
             longPressTriggered = true
-
+        
             const current =
-              tableSelectionKey.getState(
-                view.state,
-              )
-
-            const cells =
-              current?.cells ?? []
-
-            /*
-             * Long press starts/continues multi-selection.
-             */
-            const next = containsCell(
-              cells,
-              cell.pos,
-            )
+              tableSelectionKey.getState(view.state)
+        
+            const cells = current?.cells ?? []
+        
+            const next = containsCell(cells, cell.pos)
               ? cells
               : [...cells, cell]
-
+        
             view.dispatch(
-              view.state.tr.setMeta(
-                tableSelectionKey,
-                {
-                  cells: next,
-                  multi: true,
-                },
-              ),
+              view.state.tr.setMeta(tableSelectionKey, {
+                cells: next,
+                multi: true,
+              }),
             )
-
-            view.dom.classList.add(
-              're-table-selecting',
-            )
+        
+            view.dom.classList.add('re-table-selecting')
           }, 500)
-
+        
           return false
         },
 
         touchmove(view, event) {
           const e = event as TouchEvent
-
+        
           if (e.touches.length !== 1) {
             clearLongPress()
             return false
           }
-
+        
           const touch = e.touches[0]
-
-          const dx =
-            touch.clientX - touchStartX
-
-          const dy =
-            touch.clientY - touchStartY
-
-          /*
-           * If the finger moves before 500ms,
-           * this is scrolling, not selection.
-           */
+        
+          const dx = touch.clientX - touchStartX
+          const dy = touch.clientY - touchStartY
+        
+          // Before long press: let normal page scrolling happen.
           if (!longPressTriggered) {
-            if (
-              Math.abs(dx) > 10 ||
-              Math.abs(dy) > 10
-            ) {
+            if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
               clearLongPress()
             }
-
+        
             return false
           }
-
-          /*
-           * Long press has activated cell selection.
-           */
+        
+          // AFTER long press:
+          // this finger movement belongs to cell selection,
+          // NOT browser scrolling/text selection.
           event.preventDefault()
-
+          event.stopPropagation()
+        
           const cell = getTableCellAtPoint(
             view,
             touch.clientX,
             touch.clientY,
           )
-
+        
           if (!cell) {
             return true
           }
-
+        
           const current =
-            tableSelectionKey.getState(
-              view.state,
-            )
-
+            tableSelectionKey.getState(view.state)
+        
           if (
             current &&
-            !containsCell(
-              current.cells,
-              cell.pos,
-            )
+            !containsCell(current.cells, cell.pos)
           ) {
             view.dispatch(
-              view.state.tr.setMeta(
-                tableSelectionKey,
-                {
-                  cells: [
-                    ...current.cells,
-                    cell,
-                  ],
-                  multi: true,
-                },
-              ),
+              view.state.tr.setMeta(tableSelectionKey, {
+                cells: [...current.cells, cell],
+                multi: true,
+              }),
             )
           }
-
+        
           return true
         },
 
