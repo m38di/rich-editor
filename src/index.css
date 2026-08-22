@@ -1462,12 +1462,7 @@ li.ProseMirror-selectednode {
 /* ─────────────────────────────────────────
    ACTIVE CELL
    ───────────────────────────────────────── */
-.re-table-cell-dragging {
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-touch-callout: none;
-}
-
+.re-table-cell-dragging,
 .re-table-cell-dragging * {
   user-select: none;
   -webkit-user-select: none;
