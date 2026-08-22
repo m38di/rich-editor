@@ -25,10 +25,10 @@ import {
   MapDialog,
   MediaUrlDialog,
   TableSizeDialog,
-  MergeDialog,
   CaptionDialog,
   OrderedListDialog,
 } from './components/Dialogs'
+import { TableCellMenu } from './components/TableCellMenu'
 import { PreviewSheet } from './components/PreviewSheet'
 import { bus } from './editor/bus'
 import { serializeRichHtml } from './editor/serializer'
@@ -41,6 +41,7 @@ import {
   wrapTask,
   insertDetails,
   insertDivider,
+  insertGallery,
   insertMedia,
   insertMap,
 } from './editor/commands'
@@ -54,7 +55,6 @@ type DialogState =
   | { type: 'media-url'; pos: number }
   | { type: 'ordered-list'; pos: number }
   | { type: 'table' }
-  | { type: 'merge' }
   | { type: 'caption' }
   | null
 
@@ -70,6 +70,7 @@ export default function App() {
   const [preview, setPreview] = useState<PreviewState | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [slashMuted, setSlashMuted] = useState(false)
+  const [cellMenu, setCellMenu] = useState<number[] | null>(null)
   const {keyboardHeight, keyboardOpen} = useKeyboardViewport()
   const toastTimer = useRef<number | null>(null)
 
@@ -110,6 +111,7 @@ export default function App() {
       })
     })
     const offToast = bus.on('toast', ({ text }) => notify(text))
+    const offCellMenu = bus.on('table:menu', (cells) => setCellMenu(cells))
     const offOrderedList = bus.on(
       'dialog:ordered-list',
       ({ pos }) => {
@@ -129,6 +131,7 @@ export default function App() {
       offMediaUrl()
       offOrderedList()
       offToast()
+      offCellMenu()
     }
   }, [viewRef, notify])
 
@@ -155,8 +158,8 @@ export default function App() {
         case 'todo': run(wrapTask); break
         case 'toggle': run(insertDetails); break
         case 'divider': run(insertDivider); break
-        case 'image': run(insertMedia('image')); break
-        case 'video': run(insertMedia('video')); break
+        case 'image': run(insertGallery('collage')); break
+        case 'video': run(insertGallery('collage')); break
         case 'audio': run(insertMedia('audio')); break
         case 'map': run(insertMap); break
         case 'table': setDialog({ type: 'table' }); break
@@ -226,7 +229,6 @@ export default function App() {
           viewRef={viewRef}
           run={run}
           close={closeMenu}
-          onOpenMerge={() => setDialog({ type: 'merge' })}
           onOpenCaption={() => setDialog({ type: 'caption' })}
           notify={notify}
         />
@@ -286,25 +288,39 @@ export default function App() {
           onAdd={({ url, kind }) => {
             const view = viewRef.current
             if (!view) return
-          
+
             const node = view.state.doc.nodeAt(dialog.pos)
             if (!node) return
-          
+
+            if (node.type.name === 'media_figure') {
+              // single media block — set src + kind directly
+              view.dispatch(
+                view.state.tr.setNodeMarkup(dialog.pos, undefined, {
+                  ...node.attrs,
+                  src: url,
+                  kind,
+                }),
+              )
+              return
+            }
+
+            if (node.type.name !== 'media_group') return
+
             const items = Array.isArray(node.attrs.items)
               ? [...node.attrs.items]
               : []
-          
+
             if (items.length >= 50) {
-              notify('Maximum 10 media items')
+              notify('Maximum 50 media items')
               return
             }
-          
+
             items.push({
               kind,
               src: url,
               spoiler: false,
             })
-          
+
             view.dispatch(
               view.state.tr.setNodeMarkup(
                 dialog.pos,
@@ -326,11 +342,13 @@ export default function App() {
         />
       )}
       {dialog?.type === 'table' && <TableSizeDialog run={run} onClose={() => setDialog(null)} />}
-      {dialog?.type === 'merge' && (
-        <MergeDialog viewRef={viewRef} onClose={() => setDialog(null)} notify={notify} />
-      )}
       {dialog?.type === 'caption' && (
         <CaptionDialog run={run} onClose={() => setDialog(null)} notify={notify} />
+      )}
+
+      {/* table cell-selection context menu (auto + right-click) */}
+      {cellMenu && cellMenu.length > 0 && (
+        <TableCellMenu viewRef={viewRef} cellPos={cellMenu} onClose={() => setCellMenu(null)} />
       )}
 
       {/* generate → preview → download */}

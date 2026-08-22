@@ -29,12 +29,8 @@ import {
   addColumn,
   deleteRows,
   deleteColumns,
-  unmergeCell,
   toggleBordered,
   toggleStriped,
-  toggleHeaderRow,
-  setCellAlign,
-  setCellValign,
   findTableContext,
 } from '../editor/tableCommands'
 import { EMOJI_SET, SlashDef, matchSlash } from '../lib/util'
@@ -109,7 +105,7 @@ export function TextTypeMenu({ info, run, close }: TextTypeMenuProps) {
           icon={<Iv name="text" size={17} />}
           iconBg="#8E8E93"
           label="Paragraph"
-          active={info.block.type === 'paragraph' && !info.block.inQuote && info.block.type !== 'pullquote'}
+          active={info.block.type === 'paragraph' && !info.block.inQuote}
           keep
           onClick={() => pick(setTextType('paragraph'))}
         />
@@ -241,17 +237,19 @@ export function ListMenu({ info, run, close }: ListMenuProps) {
 }
 
 // ── table ops (iv_table_*) ──────────────────────────────────────────────
+// Table-level settings. Cell operations (merge/split, insert, delete,
+// highlight, alignment) live in the cell-selection context menu —
+// TableCellMenu.tsx — exactly like the Android editor.
 
 interface TableMenuProps {
   viewRef: React.MutableRefObject<EditorView | null>
   run: (cmd: Command) => void
   close: () => void
-  onOpenMerge: () => void
   onOpenCaption: () => void
   notify: (text: string) => void
 }
 
-export function TableMenu({ viewRef, run, close, onOpenMerge, onOpenCaption }: TableMenuProps) {
+export function TableMenu({ viewRef, run, close, onOpenCaption }: TableMenuProps) {
   const view = viewRef.current
   const ctx = view ? findTableContext(view.state) : null
 
@@ -287,49 +285,23 @@ export function TableMenu({ viewRef, run, close, onOpenMerge, onOpenCaption }: T
     )
   }
 
-  const alignBtn = (icon: string, title: string, onClick: () => void) => (
-    <button
-      type="button"
-      title={title}
-      aria-label={title}
-      onMouseDown={keepSelection}
-      onClick={onClick}
-      className="grid flex-1 place-items-center rounded-[8px] border border-ios-sep bg-white py-2 text-ios-label transition active:scale-95 active:bg-ios-fill"
-    >
-      <Iv name={icon} size={17} />
-    </button>
-  )
-
   return (
     <Sheet onClose={close} title="Table">
       <div className="sheet-card">
-        <Row icon={<Iv name="table_insert_bottom" size={16} />} iconBg="#34C759" label="Add row" keep onClick={() => act(addRow)} />
-        <Row icon={<Iv name="table_insert_right" size={16} />} iconBg="#34C759" label="Add column" keep onClick={() => act(addColumn)} />
+        <Row icon={<Iv name="table_insert_bottom" size={16} />} iconBg="#34C759" label="Add row" keep onClick={() => act(addRow, false)} />
+        <Row icon={<Iv name="table_insert_right" size={16} />} iconBg="#34C759" label="Add column" keep onClick={() => act(addColumn, false)} />
         <Row icon={<Iv name="table_remove" size={16} />} iconBg="#FF3B30" label="Delete row" keep onClick={deleteCurrentRow} />
         <Row icon={<Iv name="table_remove" size={16} />} iconBg="#FF3B30" label="Delete column" keep onClick={deleteCurrentColumn} />
       </div>
       <div className="sheet-card">
-        <Row icon={<Iv name="table_merge" size={16} />} iconBg="#5856D6" label="Merge cells…" keep onClick={() => { onOpenMerge(); close() }} />
-        <Row icon={<Iv name="table_unmerge" size={16} />} iconBg="#FF9500" label="Unmerge cell" keep onClick={() => act(unmergeCell)} />
-      </div>
-      <div className="sheet-card">
-        <Row icon={<Iv name="h" size={16} />} iconBg="#007AFF" label="Header row" keep onClick={() => act(toggleHeaderRow, false)} />
         <Row icon={<Iv name="table" size={16} />} iconBg="#8E8E93" label="Bordered" active={ctx.attrs.bordered} keep onClick={() => act(toggleBordered, false)} />
         <Row icon={<Iv name="table_highlight" size={16} />} iconBg="#5AC8FA" label="Striped" active={ctx.attrs.striped} keep onClick={() => act(toggleStriped, false)} />
         <Row icon={<Iv name="text" size={16} />} iconBg="#FF9500" label="Caption…" keep onClick={() => { onOpenCaption(); close() }} />
       </div>
-      <div className="sheet-card px-3 py-2">
-        <div className="flex items-center gap-1.5 py-1">
-          <span className="w-14 text-[12px] font-semibold uppercase tracking-wide text-ios-secondary">Align</span>
-          {alignBtn('align_horiz_left', 'Align left', () => run(setCellAlign('left')))}
-          {alignBtn('align_horiz_middle', 'Align center', () => run(setCellAlign('center')))}
-          {alignBtn('align_horiz_right', 'Align right', () => run(setCellAlign('right')))}
-        </div>
-        <div className="flex items-center gap-1.5 py-1">
-          <span className="w-14 text-[12px] font-semibold uppercase tracking-wide text-ios-secondary">Vertical</span>
-          {alignBtn('align_vert_top', 'Top', () => run(setCellValign('top')))}
-          {alignBtn('align_vert_middle', 'Middle', () => run(setCellValign('middle')))}
-          {alignBtn('align_vert_bottom', 'Bottom', () => run(setCellValign('bottom')))}
+      <div className="sheet-card">
+        <div className="px-4 py-3.5 text-[13.5px] leading-snug text-ios-secondary">
+          Select cells (long-press, Ctrl+click, or the row/column dots) to
+          merge, split, highlight, insert or delete — the cell menu opens automatically.
         </div>
       </div>
     </Sheet>
@@ -376,6 +348,9 @@ export function MathMenu({ run, close, onOpenInlineMath, notify }: MathMenuProps
 }
 
 // ── attach grid (Telegram-style colored circles) ────────────────────────
+// Photo/Video inserts the SAME media cell Telegram uses: empty at first,
+// + button top-right adds items, and from 2 items the collage/slideshow
+// switch appears. There are no separate collage/slideshow entries.
 
 interface AttachSheetProps {
   run: (cmd: Command) => void
@@ -385,10 +360,8 @@ interface AttachSheetProps {
 
 export function AttachSheet({ run, close, onOpenTableSize }: AttachSheetProps) {
   const items: { icon: string; bg: string; label: string; onClick: () => void }[] = [
-    { icon: 'media', bg: '#007AFF', label: 'Photo or Video', onClick: () => run(insertMedia('image')) },
+    { icon: 'media', bg: '#007AFF', label: 'Photo or Video', onClick: () => run(insertGallery('collage')) },
     { icon: 'audio', bg: '#FF2D55', label: 'Audio', onClick: () => run(insertMedia('audio')) },
-    { icon: 'media_collage', bg: '#5856D6', label: 'Collage', onClick: () => run(insertGallery('collage')) },
-    { icon: 'media_slideshow', bg: '#5AC8FA', label: 'Slideshow', onClick: () => run(insertGallery('slideshow')) },
     { icon: 'location', bg: '#34C759', label: 'Map', onClick: () => run(insertMap) },
     { icon: 'table', bg: '#FF9500', label: 'Table', onClick: onOpenTableSize },
     { icon: 'details', bg: '#AF52DE', label: 'Toggle', onClick: () => run(insertDetails) },

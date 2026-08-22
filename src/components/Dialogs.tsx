@@ -2,7 +2,7 @@
 //
 // iOS grabber-sheets with grouped forms (Cancel · title · Done header),
 // replacing the Android dialogs: link/anchor, date (tg-time), LaTeX with
-// live preview, location, table size, merge range and caption.
+// live preview, location, table size and caption.
 
 import { useEffect, useState } from 'react'
 import { Command, TextSelection } from 'prosemirror-state'
@@ -10,7 +10,7 @@ import { EditorView } from 'prosemirror-view'
 import katex from 'katex'
 import { N } from '../editor/schema'
 import { setLink, removeLink, insertAnchor, insertTime, insertCustomEmoji, collectAnchors } from '../editor/commands'
-import { mergeCells, setTableCaption, insertTableCmd, Rect } from '../editor/tableCommands'
+import { setTableCaption, insertTableCmd } from '../editor/tableCommands'
 import { OrderedListType, setOrderedListAttrs } from '../editor/commands'
 import { TIME_FORMATS, formatTime } from '../lib/util'
 import { Minus, Plus } from './icons'
@@ -895,73 +895,6 @@ export function TableSizeDialog({ run, onClose }: TableSizeDialogProps) {
           {stepper(cols, setCols, 1, 10, 'Columns')}
         </div>
         <p className="form-hint">The first row becomes a header row.</p>
-      </div>
-    </SheetDialog>
-  )
-}
-
-// ── merge range dialog ──────────────────────────────────────────────────
-
-interface MergeDialogProps {
-  viewRef: React.MutableRefObject<EditorView | null>
-  onClose: () => void
-  notify: (t: string) => void
-}
-
-export function MergeDialog({ viewRef, onClose, notify }: MergeDialogProps) {
-  const [r1, setR1] = useState(1)
-  const [c1, setC1] = useState(1)
-  const [r2, setR2] = useState(2)
-  const [c2, setC2] = useState(2)
-
-  const apply = () => {
-    const view = viewRef.current
-    if (!view) return
-    const rect: Rect = { r1: r1 - 1, c1: c1 - 1, r2: r2 - 1, c2: c2 - 1 }
-    if (rect.r2 < rect.r1 || rect.c2 < rect.c1) {
-      notify('Invalid range')
-      return
-    }
-    let applied = false
-    mergeCells(rect)(view.state, (tr) => {
-      view.dispatch(tr)
-      applied = true
-    })
-    if (applied) {
-      notify('Cells merged')
-      view.focus()
-    } else {
-      notify('Range must be a clean rectangle of whole cells')
-    }
-    onClose()
-  }
-
-  const num = (v: number, set: (n: number) => void, label: string) => (
-    <div className="form-row">
-      <span className="form-label">{label}</span>
-      <input
-        type="number"
-        min={1}
-        className="form-input tabular-nums"
-        value={v}
-        onChange={(e) => set(Math.max(1, Number(e.target.value) || 1))}
-      />
-    </div>
-  )
-
-  return (
-    <SheetDialog title="Merge Cells" onClose={onClose} onDone={apply} doneLabel="Merge">
-      <div className="px-2 pb-2">
-        <div className="ios-form">
-          {num(r1, setR1, 'First row')}
-          {num(c1, setC1, 'First column')}
-          {num(r2, setR2, 'Last row')}
-          {num(c2, setC2, 'Last column')}
-        </div>
-        <p className="form-hint">
-          1-based coordinates. The range must be exactly covered by whole cells; their texts are
-          joined into the top-left cell.
-        </p>
       </div>
     </SheetDialog>
   )

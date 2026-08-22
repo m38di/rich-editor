@@ -126,6 +126,13 @@ export function Iv({ name, size = 22, className }: IvProps & { name: string }) {
 /** True when an icon exists for the given key. */
 export const hasIv = (name: string) => name in ICONS
 
+/** Same icons as plain SVG strings — for non-React node views. */
+export function ivIconSvg(name: string, size = 22): string {
+  const icon = ICONS[name]
+  if (!icon) return ''
+  return `<svg width="${size}" height="${size}" viewBox="${icon.vb}" aria-hidden="true">${icon.inner}</svg>`
+}
+
 // Named components
 export const IvAlignHorizLeft = (p: IvProps) => <Iv name='align_horiz_left' {...p} />
 export const IvAlignHorizMiddle = (p: IvProps) => <Iv name='align_horiz_middle' {...p} />

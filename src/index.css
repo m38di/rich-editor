@@ -700,6 +700,24 @@ li.ProseMirror-selectednode {
   list-style-type: disc;
 }
 
+/* nested bullet cycle (disc → circle → square, repeating) — CSS backup for
+   the inline styles set by updateBulletMarkers */
+.rich-editor ul ul {
+  list-style-type: circle;
+}
+.rich-editor ul ul ul {
+  list-style-type: square;
+}
+.rich-editor ul ul ul ul {
+  list-style-type: disc;
+}
+.rich-editor ul ul ul ul ul {
+  list-style-type: circle;
+}
+.rich-editor ul ul ul ul ul ul {
+  list-style-type: square;
+}
+
 .rich-editor ul[data-marker="disc"] {
   list-style-type: disc;
 }
@@ -754,25 +772,25 @@ li.ProseMirror-selectednode {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
-/* checklist — iOS Reminders style */
+/* checklist — checkbox sits in the marker gutter, text aligns with the
+   other lists (bulleted/ordered text starts at the 28px indent) */
 .re-task {
   list-style: none;
   display: flex;
-  gap: 11px;
+  gap: 9px;
   align-items: flex-start;
   margin-left: -28px;
-  padding-left: 2px;
 }
 .re-checkbox {
   flex: 0 0 auto;
-  width: 22px;
-  height: 22px;
-  margin-top: 3.5px;
-  border: 1.6px solid #c7c7cc;
-  border-radius: 50%;
+  width: 17px;
+  height: 17px;
+  margin-top: 3px;
+  border: 1.5px solid #c7c7cc;
+  border-radius: 5px;
   background: #fff;
   color: #fff;
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1;
   display: grid;
   place-items: center;
@@ -785,11 +803,6 @@ li.ProseMirror-selectednode {
 .re-task.checked .re-checkbox {
   background: var(--blue);
   border-color: var(--blue);
-}
-.re-task.checked .re-task-body {
-  color: var(--tertiary);
-  text-decoration: line-through;
-  text-decoration-color: rgba(60, 60, 67, 0.3);
 }
 .re-task-body {
   flex: 1;
@@ -907,6 +920,14 @@ li.ProseMirror-selectednode {
 
   list-style: none;
   outline: none;
+}
+
+/* Telegram's "Title…" hint on empty toggles */
+.re-details-body > summary:empty::before {
+  content: 'Title…';
+  color: var(--tertiary);
+  font-weight: 400;
+  pointer-events: none;
 }
 
 /* Remove native marker if browser creates one */
@@ -1118,93 +1139,159 @@ li.ProseMirror-selectednode {
   color: var(--tertiary);
 }
 
-/* gallery — collage / slideshow */
-.re-gallery-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
-  gap: 2px;
-  border-radius: 10px;
+/* gallery — collage / slideshow (RichMediaCell port) */
+.re-gallery {
+  position: relative;
+  margin: 6px 0 4px;
+}
+.re-gallery-stage {
+  position: relative;
   overflow: hidden;
-}
-.re-gallery-grid[data-mode='slideshow'] {
-  display: flex;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-}
-.re-gallery-grid[data-mode='slideshow'] .re-gallery-tile {
-  flex: 0 0 250px;
-  scroll-snap-align: start;
-  aspect-ratio: 16 / 10;
+  border-radius: 10px;
+  background: var(--grouped);
+  transition: height 320ms cubic-bezier(0.23, 1, 0.32, 1);
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 .re-gallery-tile {
-  position: relative;
-  aspect-ratio: 1;
-  background: var(--grouped);
+  position: absolute;
+  overflow: hidden;
+  background: #e6e6eb;
 }
-.re-gallery-tile img,
-.re-gallery-tile video {
+.re-gallery-stage.morphing .re-gallery-tile {
+  transition:
+    left 320ms cubic-bezier(0.23, 1, 0.32, 1),
+    top 320ms cubic-bezier(0.23, 1, 0.32, 1),
+    width 320ms cubic-bezier(0.23, 1, 0.32, 1),
+    height 320ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.re-gallery-media {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
 }
+.re-gallery-tile img.re-gallery-media {
+  pointer-events: none;
+}
 .re-gallery-tile audio {
-  margin: 42px 8px;
-}
-.re-gallery-tile.spoilered img,
-.re-gallery-tile.spoilered video {
-  filter: blur(16px);
-  transform: scale(1.07);
-}
-.re-tile-tools {
   position: absolute;
+  left: 12px;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: calc(100% - 24px);
+}
+.re-gallery-tile.spoilered .re-gallery-media {
+  filter: blur(18px);
+  transform: scale(1.08);
+}
+
+/* circle buttons (createCircleButton) */
+.re-gal-circle {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  cursor: pointer;
+  background: rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.25);
+  transition: transform 0.15s var(--spring), opacity 0.15s ease;
+  z-index: 6;
+}
+.re-gal-circle:active {
+  transform: scale(0.9);
+}
+.re-gal-add {
   top: 6px;
   right: 6px;
+}
+.re-gal-switch {
+  top: 6px;
+  right: 50px;
+}
+.re-gal-itemmenu {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 26px;
+  height: 26px;
+}
+
+/* slideshow page dots (drawDots) */
+.re-gallery-pagerdots {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 20px;
   display: flex;
-  gap: 4px;
-  opacity: 0;
-  transition: opacity 0.18s ease;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  pointer-events: none;
+  z-index: 4;
 }
-.re-gallery-tile:hover .re-tile-tools {
-  opacity: 1;
+.re-gal-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.63);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  transition: width 0.15s ease, height 0.15s ease, background 0.15s ease;
 }
-.re-gallery-add {
-  border: none;
-  background: rgba(0, 122, 255, 0.07);
-  color: var(--blue);
-  font-size: 26px;
-  font-weight: 300;
-  cursor: pointer;
-  min-height: 92px;
-  transition: background 0.15s ease;
-}
-.re-gallery-add:active {
-  background: rgba(0, 122, 255, 0.14);
-}
-.re-gallery-mode {
-  grid-column: 1 / -1;
-  display: flex;
-  gap: 2px;
-  padding: 5px;
-  background: rgba(120, 120, 128, 0.08);
-}
-.re-gallery-mode button {
-  flex: 1;
-  border: none;
-  background: transparent;
-  padding: 6px 0;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--secondary);
-  cursor: pointer;
-  letter-spacing: -0.1px;
-  transition: all 0.2s var(--spring);
-}
-.re-gallery-mode button.on {
+.re-gal-dot.on {
+  width: 8px;
+  height: 8px;
   background: #fff;
-  color: var(--blue);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* per-item ⋯ menu (onMenuClicked) */
+.re-gal-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 25;
+}
+.re-gal-menu {
+  position: absolute;
+  z-index: 30;
+  min-width: 230px;
+  padding: 5px;
+  border-radius: 14px;
+  background: rgba(249, 249, 249, 0.92);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 0.5px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+}
+.re-gal-menu-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  background: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 400;
+  color: #000;
+  cursor: pointer;
+  text-align: left;
+}
+.re-gal-menu-row:active {
+  background: rgba(0, 0, 0, 0.05);
+}
+.re-gal-menu-row.danger {
+  color: #ff3b30;
 }
 
 /* map — iOS Maps-style placeholder */
@@ -1482,6 +1569,48 @@ li.ProseMirror-selectednode {
 }
 
 /* ─────────────────────────────────────────
+   Cell alignment (schema stores align/valign
+   as HTML attributes; CSS default must not
+   override them)
+   ───────────────────────────────────────── */
+
+.re-table td[align='center'],
+.re-table th[align='center'] {
+  text-align: center;
+}
+.re-table td[align='right'],
+.re-table th[align='right'] {
+  text-align: right;
+}
+.re-table td[valign='middle'],
+.re-table th[valign='middle'] {
+  vertical-align: middle;
+}
+.re-table td[valign='bottom'],
+.re-table th[valign='bottom'] {
+  vertical-align: bottom;
+}
+
+/* ─────────────────────────────────────────
+   Caption — Telegram's centered table title
+   ───────────────────────────────────────── */
+
+.re-table caption {
+  caption-side: top;
+  text-align: center;
+  padding: 2px 8px 8px;
+  font-weight: 600;
+  color: var(--secondary);
+  caret-color: var(--blue);
+}
+.re-table caption:empty::before {
+  content: 'Caption…';
+  color: var(--tertiary);
+  font-weight: 400;
+  pointer-events: none;
+}
+
+/* ─────────────────────────────────────────
    Paragraphs inside cells
    ───────────────────────────────────────── */
 
@@ -1517,6 +1646,154 @@ li.ProseMirror-selectednode {
 .re-table tr:last-child td:last-child,
 .re-table tr:last-child th:last-child {
   border-bottom-right-radius: 13px;
+}
+
+/* ─────────────────────────────────────────
+   Table host — row/column grab handles
+   (RichTableCellGrid dots + bulge)
+   ───────────────────────────────────────── */
+
+.re-table-host {
+  position: relative;
+  margin: 12px 0;
+  padding: 2px 6px 28px 28px;
+}
+.re-table-host > table.re-table {
+  margin: 0;
+}
+.re-table-handles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+.re-table-handles.on {
+  opacity: 1;
+}
+.re-th-dots {
+  position: absolute;
+  display: flex;
+  gap: 3px;
+  pointer-events: auto;
+  cursor: pointer;
+  padding: 10px 9px;
+}
+.re-th-dots.row {
+  left: 0;
+  top: 0;
+  transform: translateY(-50%);
+  flex-direction: column;
+}
+.re-th-dots.col {
+  bottom: 0;
+  transform: translateX(-50%);
+}
+.re-th-dots span {
+  width: 3.5px;
+  height: 3.5px;
+  border-radius: 50%;
+  background: rgba(60, 60, 67, 0.5);
+  transition: background 0.15s ease;
+}
+.re-th-dots.sel span {
+  background: #fff;
+}
+.re-th-bulge {
+  position: absolute;
+  background: var(--blue);
+  border-radius: 9px;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+  pointer-events: none;
+}
+.re-th-bulge.row {
+  left: 8px;
+  width: 14px;
+}
+.re-th-bulge.col {
+  bottom: 8px;
+  height: 14px;
+}
+
+/* ─────────────────────────────────────────
+   Cell-selection context menu
+   (RichEditorListView.showTableCellMenu)
+   ───────────────────────────────────────── */
+
+.re-ctx-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+}
+.re-ctx-menu {
+  position: fixed;
+  z-index: 61;
+  width: 260px;
+  padding: 6px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 0.5px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+}
+.re-ctx-title {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--secondary);
+  padding: 6px 0 2px;
+}
+.re-ctx-align-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 6px 8px;
+}
+.re-ctx-align-gap {
+  width: 10px;
+}
+.re-ctx-align-btn {
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: #000;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.re-ctx-align-btn.on {
+  background: var(--blue);
+  color: #fff;
+}
+.re-ctx-sep {
+  height: 0.5px;
+  background: rgba(60, 60, 67, 0.18);
+  margin: 2px 10px 4px;
+}
+.re-ctx-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  background: none;
+  border-radius: 10px;
+  font-size: 15px;
+  color: #000;
+  cursor: pointer;
+  text-align: left;
+}
+.re-ctx-row:active {
+  background: rgba(0, 0, 0, 0.05);
+}
+.re-ctx-row.danger {
+  color: #ff3b30;
 }
 /* ── keyframes ─────────────────────────────────────────────────── */
 

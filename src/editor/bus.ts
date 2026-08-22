@@ -10,6 +10,10 @@ export type BusEvents = {
   'dialog:link': void
   'dialog:media-url': { pos: number }
   'dialog:ordered-list': { pos: number }
+  /** selected table-cell doc positions, or null when selection empties */
+  'table:menu': number[] | null
+  /** every cell-selection change, including the single active cell */
+  'table:selection': number[]
   'toast': { text: string }
 }
 

@@ -299,6 +299,8 @@ const nodes: Record<string, NodeSpec> = {
 
   // Single media block (Android: MediaBlock mode=single). `kind` audio uses
   // title/author for the player chrome ("author – title"), editor-only fields.
+  // NOTE: not `draggable` — ProseMirror's drag handling on mousedown prevents
+  // placing the caret inside the caption contentDOM.
   media_figure: {
     attrs: {
       kind: { default: 'image' }, // MediaKind
@@ -310,7 +312,6 @@ const nodes: Record<string, NodeSpec> = {
     content: 'fig_caption?',
     group: 'block',
     isolating: true,
-    draggable: true,
     toDOM: () => ['figure', 0],
   },
 
@@ -324,7 +325,6 @@ const nodes: Record<string, NodeSpec> = {
     content: 'fig_caption?',
     group: 'block',
     isolating: true,
-    draggable: true,
     toDOM: () => ['div', { class: 'media-group' }, 0],
   },
 
@@ -337,7 +337,6 @@ const nodes: Record<string, NodeSpec> = {
     content: 'fig_caption?',
     group: 'block',
     isolating: true,
-    draggable: true,
     toDOM: () => ['div', { class: 'map-block' }, 0],
   },
 

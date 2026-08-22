@@ -351,22 +351,39 @@ export const toggleDetailsOpen: Command = (state, dispatch) => {
 
 // ── Block insertion (attach sheet / slash commands) ─────────────────────
 
-/** Insert a standalone block after the current top-level block and put the
- *  caret in a fresh paragraph below it — mirrors Android's "insert row". */
+/** Insert a block and put the caret in a fresh paragraph below it — mirrors
+ *  Android's "insert row". When the caret sits inside a container (toggle
+ *  details, quote, list item…), the block nests INSIDE that container right
+ *  after the caret's block instead of jumping to the top level. Table cells
+ *  are skipped — their grid math expects paragraph content. */
 function insertBlockNode(makeNode: () => Node | null, focusAfter = true): Command {
   return (state, dispatch) => {
     const node = makeNode()
     if (!node) return false
     if (dispatch) {
       const { $from } = state.selection
-      const after = $from.after(1)
-      let tr = state.tr.insert(after, node)
       const para = N.paragraph.create()
+      let after = $from.after(1) // top-level fallback
+      for (let d = $from.depth; d >= 2; d--) {
+        const container = $from.node(d - 1)
+        if (container.type.name === 'table_cell' || container.type.name === 'table_header') {
+          continue
+        }
+        const index = $from.index(d - 1) + 1
+        if (
+          container.canReplaceWith(index, index, node.type) &&
+          container.canReplaceWith(index + 1, index + 1, para.type)
+        ) {
+          after = $from.after(d)
+          break
+        }
+      }
+      let tr = state.tr.insert(after, node)
       tr = tr.insert(after + node.nodeSize, para)
       if (focusAfter) {
-        tr = tr.setSelection(TextSelection.create(tr.doc, after + node.nodeSize + 1))
+        tr = tr.setSelection(TextSelection.near(tr.doc.resolve(after + node.nodeSize + 1)))
       } else {
-        tr = tr.setSelection(TextSelection.create(tr.doc, after + 1))
+        tr = tr.setSelection(TextSelection.near(tr.doc.resolve(after + 1)))
       }
       dispatch(tr.scrollIntoView())
     }
@@ -392,12 +409,13 @@ export const insertMap: Command = insertBlockNode(() =>
 
 export const insertMathBlock: Command = insertBlockNode(() => N.math_block.create({ tex: '' }))
 
+// caret lands in the title (summary) — Telegram focuses the toggle title
 export const insertDetails: Command = insertBlockNode(() => {
   const summary = N.details_summary.createAndFill()
   const para = N.paragraph.create()
   if (!summary) return null
   return N.details.create({ open: true }, [summary, para])
-})
+}, false)
 
 // ── Inline atoms (math / date / anchor) ─────────────────────────────────
 

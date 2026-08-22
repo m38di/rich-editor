@@ -47,6 +47,7 @@ import {
 import { nextCell, isInTable } from './tableCommands'
 import { M } from './schema'
 import { docTextLength } from './serializer'
+import { bus } from './bus'
 
 // ── markdown line-start shortcuts ───────────────────────────────────────
 
@@ -196,7 +197,6 @@ export function getSlashState(state: EditorState): SlashState | undefined {
 }
 
 // ── table cell selection ────────────────────────────────────────────────
-// ── table cell selection ────────────────────────────────────────────────
 
 export interface TableCellSelection {
   pos: number
@@ -209,6 +209,16 @@ export interface TableSelectionState {
 
 export const tableSelectionKey =
   new PluginKey<TableSelectionState>('tableSelection')
+
+/** Leave cell-selection mode (Android: exitCellSelectionMode). */
+export function clearTableSelection(view: EditorView): void {
+  view.dispatch(
+    view.state.tr.setMeta(tableSelectionKey, {
+      cells: [],
+      multi: false,
+    }),
+  )
+}
 
 function getTableCellAtDOM(
   view: EditorView,
@@ -256,31 +266,6 @@ function getTableCellAtPoint(
     view,
     document.elementFromPoint(x, y),
   )
-}
-
-function getTableCellFromSelection(
-  state: EditorState,
-): TableCellSelection | null {
-  const { $from } = state.selection
-
-  for (
-    let depth = $from.depth;
-    depth > 0;
-    depth--
-  ) {
-    const node = $from.node(depth)
-
-    if (
-      node.type.name === 'table_cell' ||
-      node.type.name === 'table_header'
-    ) {
-      return {
-        pos: $from.before(depth),
-      }
-    }
-  }
-
-  return null
 }
 
 function containsCell(
@@ -338,46 +323,45 @@ export const tableSelectionPlugin = () =>
         }
       },
 
-      apply(tr, old, oldState, newState) {
+      apply(tr, old) {
         const meta = tr.getMeta(tableSelectionKey)
-      
+
         // Explicit cell-selection operation.
         if (meta) {
           return meta
         }
-      
+
         // If we're currently doing multi-cell selection,
         // don't let normal cursor movement destroy it.
         if (old.multi) {
           return old
         }
-      
-        /*
-         * Normal editing.
-         *
-         * Follow ProseMirror's actual cursor.
-         *
-         * This is what makes Enter, arrow keys, etc.
-         * update the highlighted active cell correctly.
-         */
-        // if (tr.selectionSet) {
-        //   const cell = getTableCellFromSelection(newState)
-      
-        //   if (cell) {
-        //     return {
-        //       cells: [cell],
-        //       multi: false,
-        //     }
-        //   }
-      
-        //   return {
-        //     cells: [],
-        //     multi: false,
-        //   }
-        // }
-      
+
         return old
       },
+    },
+
+    view: () => {
+      let lastSig = ''
+      return {
+        update: (view) => {
+          const s = tableSelectionKey.getState(view.state)
+          const positions = s ? s.cells.map((c) => c.pos) : []
+          const sig = positions.join(',')
+          if (sig !== lastSig) {
+            lastSig = sig
+            // Fine-grained: every selection change (single active cell too) —
+            // drives the TableView row/column dot handles.
+            bus.emit('table:selection', positions)
+            // Auto-show/hide the cell menu (Android: cellSelectionListener →
+            // showTableCellMenu / exitCellSelectionMode).
+            bus.emit(
+              'table:menu',
+              s && s.multi && positions.length > 0 ? positions : null,
+            )
+          }
+        },
+      }
     },
 
     props: {
@@ -461,9 +445,9 @@ export const tableSelectionPlugin = () =>
           /*
            * RIGHT CLICK
            *
-           * Select the cell under the pointer, but DON'T
-           * preventDefault. This allows the contextmenu
-           * event to happen normally.
+           * Select the cell under the pointer in menu mode —
+           * the auto-shown context menu replaces the native one
+           * (see the contextmenu handler below).
            */
           if (e.button === 2) {
             const cell = getTableCellAtDOM(
@@ -497,7 +481,7 @@ export const tableSelectionPlugin = () =>
                 tableSelectionKey,
                 {
                   cells: [cell],
-                  multi: false,
+                  multi: true,
                 },
               ),
             )
@@ -769,7 +753,26 @@ export const tableSelectionPlugin = () =>
             event.stopPropagation()
             return true
           }
-        
+
+          // Table cells own their context menu — suppress the native one so
+          // the auto-shown cell menu is the only popup.
+          const cell = getTableCellAtDOM(view, event.target)
+          if (cell) {
+            event.preventDefault()
+            // Keyboard-invoked contextmenu (Shift+F10 / Menu key) has no
+            // preceding right-mousedown — select the cell ourselves.
+            const current = tableSelectionKey.getState(view.state)
+            if (!current?.multi || !containsCell(current.cells, cell.pos)) {
+              view.dispatch(
+                view.state.tr.setMeta(tableSelectionKey, {
+                  cells: [cell],
+                  multi: true,
+                }),
+              )
+            }
+            return true
+          }
+
           return false
         },
       },
@@ -814,6 +817,13 @@ export function selectionReporter(onChange: (info: SelectionInfo) => void): Plug
         const linkMark = state.schema.marks.link.isInSet(
           state.selection.empty ? state.storedMarks || $from.marks() : [],
         )
+        let inTable = false
+        for (let d = $from.depth; d > 0; d--) {
+          if ($from.node(d).type.name === 'table') {
+            inTable = true
+            break
+          }
+        }
         const info: SelectionInfo = {
           empty: state.selection.empty,
           marks,
@@ -822,6 +832,7 @@ export function selectionReporter(onChange: (info: SelectionInfo) => void): Plug
           canRedo: redoDepth(state) > 0,
           chars: docTextLength(state.doc),
           linkHref: linkMark ? linkMark.attrs.href : null,
+          inTable,
         }
         const sig = JSON.stringify([
           info.empty,
@@ -843,6 +854,23 @@ export function selectionReporter(onChange: (info: SelectionInfo) => void): Plug
 }
 
 // ── keymap ──────────────────────────────────────────────────────────────
+
+/**
+ * Enter inside media/map captions inserts a line break instead of splitting
+ * the block apart (Telegram captions are multiline).
+ */
+const captionNewline: Command = (state, dispatch) => {
+  const { $from } = state.selection
+  for (let d = $from.depth; d > 0; d--) {
+    if ($from.node(d).type.name === 'fig_caption') {
+      if (dispatch) {
+        dispatch(state.tr.replaceSelectionWith(N.hard_break.create()))
+      }
+      return true
+    }
+  }
+  return false
+}
 
 export function buildKeymap(opts: { onOpenLink: () => void }): Plugin[] {
   const bindings: Record<string, Command> = {
@@ -887,14 +915,25 @@ export function buildKeymap(opts: { onOpenLink: () => void }): Plugin[] {
 
   return [
     keymap(bindings),
-  
+
+    // Enter: continue lists (next numbered/bulleted item — the Android
+    // RichEditText enter behavior), soft-break inside captions, then the
+    // default block splitting.
+    keymap({
+      Enter: chainCommands(
+        splitListItemAny,
+        captionNewline,
+        baseKeymap.Enter,
+      ),
+    }),
+
     keymap({
       Backspace: chainCommands(
         undoInputRule,
         baseKeymap.Backspace,
       ),
     }),
-  
+
     keymap(baseKeymap),
   ]
 }

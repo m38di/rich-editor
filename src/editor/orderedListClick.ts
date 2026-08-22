@@ -38,12 +38,11 @@ export function handleOrderedListMarkerClick(
 
   if (!(li instanceof HTMLElement)) return false
 
-  const ol = li.closest('ol')
+  // Only a DIRECT li of an <ol> opens the ordered-list menu — a bullet li
+  // nested inside an ordered list must keep its own behavior.
+  const ol = li.parentElement
 
-  if (!(ol instanceof HTMLElement)) return false
-
-  // Make sure this is actually an ordered list belonging to PM.
-  if (!ol.matches('ol')) return false
+  if (!(ol instanceof HTMLElement) || ol.tagName !== 'OL') return false
 
   const paragraph = li.querySelector(':scope > p')
 
