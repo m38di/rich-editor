@@ -683,11 +683,11 @@ export const tableSelectionPlugin = () =>
             return false
           }
           
-          // We own the gesture now.
+          // Cell selection owns the gesture now.
           event.preventDefault()
           
-          window.getSelection()?.removeAllRanges()
-        
+          clearNativeTextSelection()
+                  
           const cell = getTableCellAtPoint(
             view,
             touch.clientX,
