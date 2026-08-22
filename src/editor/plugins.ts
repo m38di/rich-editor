@@ -740,27 +740,22 @@ export const tableSelectionPlugin = () =>
             return false
           }
         
+          const touch = e.touches[0]
+        
+          const dx = touch.clientX - touchStartX
+          const dy = touch.clientY - touchStartY
+        
           /*
-           * Before long press:
+           * BEFORE long press:
            *
-           * DO NOTHING.
+           * This is a completely normal mobile gesture.
+           * DO NOT preventDefault().
+           * DO NOT return true.
            *
-           * The .main-scroll container must remain
-           * completely free to scroll.
+           * Returning false lets the browser scroll normally.
            */
           if (!longPressTriggered) {
-            const touch = e.touches[0]
-        
-            const dx =
-              touch.clientX - touchStartX
-        
-            const dy =
-              touch.clientY - touchStartY
-        
-            if (
-              Math.abs(dx) > 10 ||
-              Math.abs(dy) > 10
-            ) {
+            if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
               clearLongPress()
             }
         
@@ -768,9 +763,45 @@ export const tableSelectionPlugin = () =>
           }
         
           /*
-           * The real work is now done by the native
-           * non-passive listener above.
+           * AFTER long press:
+           *
+           * We are now explicitly selecting table cells.
+           * Scrolling must stop while dragging across cells.
            */
+          e.preventDefault()
+        
+          const cell = getTableCellAtPoint(
+            view,
+            touch.clientX,
+            touch.clientY,
+          )
+        
+          if (!cell) {
+            return true
+          }
+        
+          const current =
+            tableSelectionKey.getState(view.state)
+        
+          if (!current) {
+            return true
+          }
+        
+          if (!containsCell(current.cells, cell.pos)) {
+            view.dispatch(
+              view.state.tr.setMeta(
+                tableSelectionKey,
+                {
+                  cells: [
+                    ...current.cells,
+                    cell,
+                  ],
+                  multi: true,
+                },
+              ),
+            )
+          }
+        
           return true
         },
         
