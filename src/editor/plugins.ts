@@ -374,85 +374,7 @@ export const tableSelectionPlugin = () =>
     },
 
     props: {
-      // ── visual selection ─────────────────────────────────────────────
-      view(editorView) {
-        const handleTouchMove = (event: TouchEvent) => {
-          if (!longPressTriggered) {
-            return
-          }
-      
-          // Once long-press selection has started,
-          // the finger belongs to the cell selector.
-          event.preventDefault()
-          event.stopPropagation()
-      
-          if (event.touches.length !== 1) {
-            return
-          }
-      
-          const touch = event.touches[0]
-      
-          const cell = getTableCellAtPoint(
-            editorView,
-            touch.clientX,
-            touch.clientY,
-          )
-      
-          if (!cell) {
-            return
-          }
-      
-          const current =
-            tableSelectionKey.getState(editorView.state)
-      
-          if (!current) {
-            return
-          }
-      
-          if (!containsCell(current.cells, cell.pos)) {
-            editorView.dispatch(
-              editorView.state.tr.setMeta(
-                tableSelectionKey,
-                {
-                  cells: [
-                    ...current.cells,
-                    cell,
-                  ],
-                  multi: true,
-                },
-              ),
-            )
-          }
-        }
-      
-        /*
-         * IMPORTANT:
-         *
-         * This MUST be passive:false.
-         *
-         * .main-scroll is the actual scrolling container,
-         * so we need a real cancellable touchmove event.
-         */
-        editorView.dom.addEventListener(
-          'touchmove',
-          handleTouchMove,
-          {
-            passive: false,
-            capture: true,
-          },
-        )
-      
-        return {
-          destroy() {
-            editorView.dom.removeEventListener(
-              'touchmove',
-              handleTouchMove,
-              true,
-            )
-          },
-        }
-      },
-      
+      // ── visual selection ─────────────────────────────────────────────    
       decorations(state) {
         const selection =
           tableSelectionKey.getState(state)
@@ -745,15 +667,8 @@ export const tableSelectionPlugin = () =>
           const dx = touch.clientX - touchStartX
           const dy = touch.clientY - touchStartY
         
-          /*
-           * BEFORE long press:
-           *
-           * This is a completely normal mobile gesture.
-           * DO NOT preventDefault().
-           * DO NOT return true.
-           *
-           * Returning false lets the browser scroll normally.
-           */
+          // Normal finger movement before long-press:
+          // this MUST remain completely native so the page can scroll.
           if (!longPressTriggered) {
             if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
               clearLongPress()
@@ -762,12 +677,7 @@ export const tableSelectionPlugin = () =>
             return false
           }
         
-          /*
-           * AFTER long press:
-           *
-           * We are now explicitly selecting table cells.
-           * Scrolling must stop while dragging across cells.
-           */
+          // Long press has turned this gesture into cell selection.
           e.preventDefault()
         
           const cell = getTableCellAtPoint(
@@ -805,14 +715,12 @@ export const tableSelectionPlugin = () =>
           return true
         },
         
-        touchend(view, event) {
+        touchend(view) {
           clearLongPress()
         
           if (!longPressTriggered) {
             return false
           }
-        
-          event.preventDefault()
         
           longPressTriggered = false
         
