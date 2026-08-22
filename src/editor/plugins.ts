@@ -632,10 +632,9 @@ export const tableSelectionPlugin = () =>
             clearNativeTextSelection()
             // Kill the browser's native text selection/caret.
             const selection = window.getSelection()
-            selection?.removeAllRanges()
           
             // Tell the browser that this gesture is now ours.
-            view.dom.classList.add('re-table-cell-dragging')
+            view.dom.classList.add('re-table-cell-selecting')
           
             const current =
               tableSelectionKey.getState(view.state)
@@ -733,7 +732,7 @@ export const tableSelectionPlugin = () =>
           longPressTriggered = false
         
           view.dom.classList.remove(
-            're-table-cell-dragging',
+            're-table-cell-selecting',
           )
         
           return true
@@ -745,7 +744,7 @@ export const tableSelectionPlugin = () =>
           longPressTriggered = false
         
           view.dom.classList.remove(
-            're-table-cell-dragging',
+            're-table-cell-selecting',
           )
         
           return false
