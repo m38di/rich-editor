@@ -603,10 +603,6 @@ export const tableSelectionPlugin = () =>
         
           const touch = e.touches[0]
         
-          const target = e.target instanceof Element
-            ? e.target
-            : null
-        
           const cell = getTableCellAtPoint(
             view,
             touch.clientX,
@@ -615,17 +611,12 @@ export const tableSelectionPlugin = () =>
         
           if (!cell) {
             clearLongPress()
-            longPressTable = null
             return false
           }
-        
-          const table = target?.closest('table.re-table') as HTMLElement | null
         
           clearLongPress()
         
           longPressTriggered = false
-          longPressTable = table
-        
           touchStartX = touch.clientX
           touchStartY = touch.clientY
         
@@ -652,14 +643,11 @@ export const tableSelectionPlugin = () =>
               ),
             )
         
-            if (longPressTable) {
-              longPressTable.classList.add(
-                're-table-selecting',
-              )
-            }
-        
+            /*
+             * Only now do we enter cell-drag mode.
+             */
             view.dom.classList.add(
-              're-table-selecting',
+              're-table-cell-dragging',
             )
           }, 500)
         
@@ -674,39 +662,37 @@ export const tableSelectionPlugin = () =>
             return false
           }
         
-          const touch = e.touches[0]
-        
-          const dx =
-            touch.clientX - touchStartX
-        
-          const dy =
-            touch.clientY - touchStartY
-        
           /*
            * Before long press:
-           *
-           * Let the browser scroll normally.
+           * this is ordinary scrolling.
            */
           if (!longPressTriggered) {
+            const touch = e.touches[0]
+        
+            const dx =
+              touch.clientX - touchStartX
+        
+            const dy =
+              touch.clientY - touchStartY
+        
             if (
               Math.abs(dx) > 10 ||
               Math.abs(dy) > 10
             ) {
               clearLongPress()
-              longPressTable = null
             }
         
             return false
           }
         
           /*
-           * Long press has activated cell selection.
+           * AFTER long press:
            *
-           * From this point onward this gesture belongs
-           * completely to our cell selector.
+           * This is our cell drag.
            */
           event.preventDefault()
-          event.stopPropagation()
+        
+          const touch = e.touches[0]
         
           const cell = getTableCellAtPoint(
             view,
@@ -721,13 +707,11 @@ export const tableSelectionPlugin = () =>
           const current =
             tableSelectionKey.getState(view.state)
         
-          if (
-            current &&
-            !containsCell(
-              current.cells,
-              cell.pos,
-            )
-          ) {
+          if (!current) {
+            return true
+          }
+        
+          if (!containsCell(current.cells, cell.pos)) {
             view.dispatch(
               view.state.tr.setMeta(
                 tableSelectionKey,
@@ -748,48 +732,29 @@ export const tableSelectionPlugin = () =>
         touchend(view, event) {
           clearLongPress()
         
-          if (longPressTriggered) {
-            event.preventDefault()
-            event.stopPropagation()
-        
-            longPressTriggered = false
-        
-            if (longPressTable) {
-              longPressTable.classList.remove(
-                're-table-selecting',
-              )
-            }
-        
-            view.dom.classList.remove(
-              're-table-selecting',
-            )
-        
-            longPressTable = null
-        
-            return true
+          if (!longPressTriggered) {
+            return false
           }
         
-          longPressTable = null
+          event.preventDefault()
         
-          return false
+          longPressTriggered = false
+        
+          view.dom.classList.remove(
+            're-table-cell-dragging',
+          )
+        
+          return true
         },
         
-        touchcancel(view, event) {
+        touchcancel(view) {
           clearLongPress()
         
           longPressTriggered = false
         
-          if (longPressTable) {
-            longPressTable.classList.remove(
-              're-table-selecting',
-            )
-          }
-        
           view.dom.classList.remove(
-            're-table-selecting',
+            're-table-cell-dragging',
           )
-        
-          longPressTable = null
         
           return false
         },
