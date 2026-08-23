@@ -1,6 +1,8 @@
-// src/components/SelectionBar.tsx — floats the formatting strip next to the
-// current selection (Notion/Medium style) instead of pinning it to a bar.
-// Falls back to below the selection when there is no room above.
+// src/components/SelectionBar.tsx — the Telegram formatting panel swap.
+//
+// Mobile (RichEditor.java): the bottom toolbar is REPLACED by a centred
+// formatting panel at the same slot (8+44+8), animated with EASE_OUT_QUINT.
+// Desktop: floats next to the selection Notion/Medium style instead.
 
 import { useLayoutEffect, useRef, useState } from 'react'
 import { EditorView } from 'prosemirror-view'
@@ -17,16 +19,29 @@ interface SelectionBarProps {
   onOpenMath: () => void
   /** px of chrome that must stay clear at the bottom on small screens */
   bottomInset: number
+  /** current dock offset (keyboard) so the swapped-in panel lands in the same slot */
+  dockBottom: number
 }
 
 const GAP = 10
 const EDGE = 8
 
-export function SelectionBar({ info, viewRef, run, bottomInset, ...handlers }: SelectionBarProps) {
+export function SelectionBar({
+  info,
+  viewRef,
+  run,
+  bottomInset,
+  dockBottom,
+  ...handlers
+}: SelectionBarProps) {
   const ref = useRef<HTMLDivElement | null>(null)
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
+  const [mobile] = useState(() => window.matchMedia('(max-width: 767px)').matches)
 
   useLayoutEffect(() => {
+    // phones: fixed slot where the dock sits — no follow-the-selection dance
+    if (mobile) return
+
     const view = viewRef.current
     const el = ref.current
     if (!view || !el) return
@@ -54,7 +69,16 @@ export function SelectionBar({ info, viewRef, run, bottomInset, ...handlers }: S
     top = Math.max(topLimit, Math.min(top, Math.max(topLimit, bottomLimit)))
 
     setPos({ top, left })
-  }, [info, viewRef, bottomInset])
+  }, [info, viewRef, bottomInset, mobile])
+
+  // phone: pinned to the dock's exact slot, horizontally centred
+  if (mobile) {
+    return (
+      <div className="fmt-float fmt-slot" style={{ bottom: dockBottom }}>
+        <FormattingPanel info={info} run={run} {...handlers} />
+      </div>
+    )
+  }
 
   return (
     <div

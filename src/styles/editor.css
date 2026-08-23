@@ -352,23 +352,28 @@ li.ProseMirror-selectednode {
   transition: background-color var(--dur-fast) ease;
 }
 
+/* RichDetailsCell: a 53px-wide full-height arrow strip on the left —
+   generous tap target, no pill background. */
 .re-details-arrow {
   position: absolute;
-  left: 10px;
-  top: 11px;
+  left: 0;
+  top: 0;
+  bottom: 0;
   z-index: 2;
-  width: 24px;
-  height: 24px;
+  width: 53px;
   margin: 0;
   padding: 0;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--r-md) 0 0 var(--r-md);
   display: grid;
   place-items: center;
-  background: var(--accent-tint);
+  background: transparent;
   color: var(--accent);
   cursor: pointer;
   transition: background-color var(--dur-fast) ease, transform var(--dur) var(--spring);
+}
+.re-details-arrow:hover {
+  background: var(--accent-tint);
 }
 .re-details-arrow::before {
   content: '';
@@ -396,7 +401,7 @@ li.ProseMirror-selectednode {
 }
 
 .re-details-body {
-  padding: 9px 14px 9px 42px;
+  padding: 9px 14px 9px 53px;
   min-height: 42px;
 }
 .re-details-body > summary {
@@ -657,6 +662,13 @@ li.ProseMirror-selectednode {
   -webkit-user-select: none;
   -webkit-touch-callout: none;
 }
+/* One moving layer for the slideshow pager — drags/settles only ever write
+   a translate3d here, which the compositor handles without layout. */
+.re-gallery-track {
+  position: absolute;
+  inset: 0;
+  will-change: transform;
+}
 .re-gallery-tile {
   position: absolute;
   overflow: hidden;
@@ -689,45 +701,139 @@ li.ProseMirror-selectednode {
   transform: scale(1.08);
 }
 
+/* ── custom slide controller (slideshow videos) ──────────────────────────
+   Replaces native <video controls> inside slides so horizontal swipes are
+   never eaten by the media controls. */
+
+.re-slide-ctrl-wrap {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 8px;
+  z-index: 5;
+  pointer-events: none; /* only the pill itself takes pointers */
+  animation: fade-in 240ms ease-out both;
+}
+.re-slide-ctrl {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 5px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.4);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  backdrop-filter: blur(16px) saturate(140%);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.25);
+}
+.re-slide-play,
+.re-slide-mute {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--spring), background-color var(--dur-fast) ease;
+}
+.re-slide-play:hover,
+.re-slide-mute:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+.re-slide-play:active,
+.re-slide-mute:active {
+  transform: scale(0.88);
+}
+.re-slide-bar {
+  flex: 1 1 auto;
+  height: 4px;
+  min-width: 40px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.28);
+  overflow: hidden;
+  cursor: default;
+}
+.re-slide-fill {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: #fff;
+  transform-origin: left center;
+  transform: scaleX(0);
+  transition: transform 120ms linear;
+}
+
+/* touch affordances: bigger hit areas for the gallery circles on phones */
+@media (hover: none) and (pointer: coarse) {
+  .re-gal-add,
+  .re-gal-switch {
+    width: 36px;
+    height: 36px;
+  }
+  .re-gal-switch {
+    right: 48px;
+  }
+  .re-gal-itemmenu {
+    width: 30px;
+    height: 30px;
+  }
+  .re-slide-play,
+  .re-slide-mute {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+/* Telegram createCircleButton(): 32×32 glass circle — 0x66000000 fill,
+   blur, 0x33FFFFFF hairline; pinned dp(6) from edges. */
 .re-gal-circle {
   position: absolute;
   z-index: 6;
   width: 32px;
   height: 32px;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: rgba(12, 14, 20, 0.5);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
+  background: rgba(0, 0, 0, 0.4);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  backdrop-filter: blur(16px) saturate(140%);
   color: #fff;
   cursor: pointer;
-  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.25);
   transition: transform var(--dur-fast) var(--spring), background-color var(--dur-fast) ease;
 }
 .re-gal-circle:hover {
-  background: rgba(12, 14, 20, 0.72);
+  background: rgba(0, 0, 0, 0.56);
 }
 .re-gal-circle:active {
   transform: scale(0.9);
 }
 .re-gal-add {
-  top: 8px;
-  right: 8px;
+  top: 6px;
+  right: 6px;
 }
 .re-gal-switch {
-  top: 8px;
-  right: 48px;
+  top: 6px;
+  right: 44px; /* add width + its inset */
 }
 .re-gal-itemmenu {
   position: absolute;
-  top: 8px;
-  left: 8px;
-  width: 26px;
-  height: 26px;
+  top: 6px;
+  left: 6px;
+  width: 28px;
+  height: 28px;
 }
 
+/* RichMediaCell slideDotPaint: white dots, r 3→5 near the active page
+   (dp(2)→dp(3)), pitch 13px, drop shadow below. */
 .re-gallery-pagerdots {
   position: absolute;
   left: 0;
@@ -738,21 +844,20 @@ li.ProseMirror-selectednode {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 7px;
   pointer-events: none;
 }
 .re-gal-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.6);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
-  transition: width var(--dur-fast) ease, height var(--dur-fast) ease,
-    background-color var(--dur-fast) ease;
+  background: rgba(255, 255, 255, 0.63);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  transition: width 180ms ease, height 180ms ease, background-color 180ms ease;
 }
 .re-gal-dot.on {
-  width: 9px;
-  height: 9px;
+  width: 10px;
+  height: 10px;
   background: #fff;
 }
 
@@ -855,4 +960,44 @@ li.ProseMirror-selectednode {
 /* KaTeX inherits the document ink in both themes */
 .rich-editor .katex {
   color: var(--text);
+}
+
+/* ── mobile comfort ────────────────────────────────────────────────────── */
+
+/* Prevent iOS Safari from zoom-jumping when a caption/author input is
+   focused: inputs must be ≥16px on coarse pointers. */
+@media (hover: none) and (pointer: coarse) {
+  .rich-editor {
+    font-size: 16.5px;
+    padding: 20px 14px calc(56px + env(safe-area-inset-bottom));
+    -webkit-tap-highlight-color: transparent;
+  }
+  .re-quote-author {
+    font-size: 16px !important;
+  }
+  /* media hover tools are unreachable without hover — show them inline */
+  .re-media-tools {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Heavy visual blocks settle in softly when they appear. Deliberately NOT
+   `.rich-editor > *`: plain paragraphs are created on every Enter, and a
+   300ms fade per keystroke reads as typing lag. `backwards` (not `both`)
+   leaves no lingering transform afterwards. */
+@keyframes block-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+.rich-editor > figure,
+.rich-editor > div.re-gallery,
+.rich-editor > .re-table-host,
+.rich-editor > .re-details,
+.rich-editor > blockquote,
+.rich-editor > aside,
+.rich-editor > pre {
+  animation: block-in 340ms var(--ease) backwards;
 }

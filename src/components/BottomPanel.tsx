@@ -50,28 +50,28 @@ export function BottomPanel({
           aria-label="Insert block"
           aria-expanded={openMenu === 'attach'}
           onClick={() => onToggleMenu('attach')}
-          className="attach-btn mr-1.5"
+          className={`attach-btn${openMenu === 'attach' ? ' on' : ''}`}
         >
-          <Iv name="outline_poll_attach_24" size={19} />
+          <Iv name="outline_poll_attach_24" size={20} />
         </button>
 
-        {item('text', 'Text style', <Iv name="text2" size={20} />)}
-        {item('list', 'Lists', <Iv name="lists" size={20} />)}
-        <button
-          type="button"
-          title={info.inTable ? 'Table options' : 'Insert 2×2 table'}
-          aria-label="Table"
-          onClick={() => (info.inTable ? onToggleMenu('table') : onInsertTable())}
-          className={`tool-btn ${info.inTable || openMenu === 'table' ? 'on' : ''}`}
-        >
-          <Iv name="table" size={19} />
-        </button>
-        {item('math', 'Math', <Iv name="math" size={20} />)}
-        {item('emoji', 'Custom emoji', <Smiley size={22} />)}
+        <div className="dock-pill">
+          {item('text', 'Text style', <Iv name="text2" size={20} />)}
+          {item('list', 'Lists', <Iv name="lists" size={20} />)}
+          <button
+            type="button"
+            title={info.inTable ? 'Table options' : 'Insert 2×2 table'}
+            aria-label="Table"
+            onClick={() => (info.inTable ? onToggleMenu('table') : onInsertTable())}
+            className={`tool-btn ${info.inTable || openMenu === 'table' ? 'on' : ''}`}
+          >
+            <Iv name="table" size={19} />
+          </button>
+          {item('math', 'Math', <Iv name="math" size={20} />)}
+          {item('emoji', 'Custom emoji', <Smiley size={21} />)}
+        </div>
 
-        <div className="flex-1" />
-
-        <span className="stat-chip mr-2 hidden sm:inline-flex">{labelFor(info)}</span>
+        <span className="stat-chip">{labelFor(info)}</span>
 
         <button
           type="button"
@@ -80,7 +80,7 @@ export function BottomPanel({
           aria-label="Generate HTML"
           className="send-btn"
         >
-          <Iv name="send_plane_24" size={18} />
+          <Iv name="send_plane_24" size={19} />
         </button>
       </div>
     </div>

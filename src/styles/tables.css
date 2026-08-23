@@ -8,12 +8,38 @@
   margin: 14px 0;
   border-collapse: separate;
   border-spacing: 0;
-  border-radius: var(--r-md);
-  overflow: hidden;
+  /* RichTableCellGrid paints backgrounds/borders clipped to dp(10).
+     `overflow:hidden` is unreliable on <table> in several engines, so the
+     corner cells carry explicit radii below — this also keeps the ring and
+     tint from spilling past the silhouette. */
+  border-radius: 10px;
   background: var(--surface);
   font-size: 14px;
   line-height: 1.5;
   table-layout: fixed;
+}
+
+/* corner rounding follows the table's dp(10) silhouette in every variant */
+.re-table tr:first-child th:first-child,
+.re-table tr:first-child td:first-child {
+  border-top-left-radius: 10px;
+}
+.re-table tr:first-child th:last-child,
+.re-table tr:first-child td:last-child {
+  border-top-right-radius: 10px;
+}
+.re-table tr:last-child td:first-child,
+.re-table tr:last-child th:first-child {
+  border-bottom-left-radius: 10px;
+}
+.re-table tr:last-child td:last-child,
+.re-table tr:last-child th:last-child {
+  border-bottom-right-radius: 10px;
+}
+/* single-cell tables / one-row headers keep all four corners round */
+.re-table tr:first-child td:only-child,
+.re-table tr:first-child th:only-child {
+  border-radius: 10px;
 }
 
 .re-table td,
@@ -74,7 +100,8 @@
   background: var(--fill);
 }
 
-/* selection + focus */
+/* ── cell selection — RichTableCellGrid chrome ─────────────────────────── */
+
 .ProseMirror.re-table-selecting,
 .ProseMirror.re-table-selecting * {
   user-select: none !important;
@@ -82,12 +109,25 @@
   -webkit-touch-callout: none !important;
   -webkit-user-drag: none !important;
 }
+
+/* Selected cells: soft accent fill (selectedFillBaseAlpha ≈ 80/255) with a
+   hairline inner edge so adjacent cells read as one merged block. The
+   strong 2px group ring (selectedStrokePaint, key_featuredStickers_addButton)
+   is painted by TableView's overlay — not per cell — so multi-selections
+   show ONE continuous outline instead of a lattice. */
 .re-table-cell-active {
-  background: var(--accent-tint) !important;
-  box-shadow: inset 0 0 0 2px rgb(var(--c-accent) / 0.7);
+  background: rgb(var(--c-accent) / 0.12) !important;
+  box-shadow: inset 0 0 0 0.75px rgb(var(--c-accent) / 0.4);
 }
+
+/* caret focus stays subtle while a selection is active */
 .re-table td:focus-within,
 .re-table th:focus-within {
+  background: rgb(var(--c-accent) / 0.12);
+  box-shadow: none;
+}
+.re-table:not(.has-cell-selection) td:focus-within,
+.re-table:not(.has-cell-selection) th:focus-within {
   background: var(--accent-tint);
   box-shadow: inset 0 0 0 2px rgb(var(--c-accent) / 0.75);
 }
@@ -135,24 +175,6 @@
   margin-top: 6px;
 }
 
-/* rounded corners */
-.re-table tr:first-child th:first-child,
-.re-table tr:first-child td:first-child {
-  border-top-left-radius: var(--r-md);
-}
-.re-table tr:first-child th:last-child,
-.re-table tr:first-child td:last-child {
-  border-top-right-radius: var(--r-md);
-}
-.re-table tr:last-child td:first-child,
-.re-table tr:last-child th:first-child {
-  border-bottom-left-radius: var(--r-md);
-}
-.re-table tr:last-child td:last-child,
-.re-table tr:last-child th:last-child {
-  border-bottom-right-radius: var(--r-md);
-}
-
 /* ── host with row/column grab handles ───────────────────────────────── */
 
 .re-table-host {
@@ -170,17 +192,37 @@
   inset: 0;
   pointer-events: none;
   opacity: 0;
-  transition: opacity var(--dur) var(--ease);
+  transition: opacity 220ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 .re-table-handles.on {
   opacity: 1;
 }
 
+/* ── merged selection ring (selectedStrokePaint) ───────────────────────── */
+
+.re-th-selring {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 220ms cubic-bezier(0.23, 1, 0.32, 1);
+  pointer-events: none;
+}
+.re-th-selring-seg,
+.re-th-selring-fill {
+  position: absolute;
+}
+.re-th-selring-seg {
+  box-sizing: border-box;
+  border: 2px solid rgb(var(--c-accent) / 0.9); /* dp(2), full alpha */
+}
+
+/* ── grab dots — RichTableCellGrid: 3dp dots at dp(8) pitch ────────────── */
+
 .re-th-dots {
   position: absolute;
   display: flex;
-  gap: 3px;
-  padding: 10px 9px;
+  gap: 4.5px; /* center-to-center ≈ 8px with 3.5px dots */
+  padding: 9px 7px;
   pointer-events: auto;
   cursor: pointer;
 }
@@ -198,29 +240,31 @@
   width: 3.5px;
   height: 3.5px;
   border-radius: 50%;
-  background: var(--faint);
+  background: var(--muted); /* key_windowBackgroundWhiteGrayText7 */
   transition: background-color var(--dur-fast) ease;
 }
 .re-th-dots:hover span {
-  background: var(--accent);
+  background: var(--text);
 }
 .re-th-dots.sel span {
-  background: var(--accent-ink);
+  background: var(--accent-ink); /* on-selection tint */
 }
+
+/* ── accent bulge (BULGE_DP=16, radius 10, addButton tint) ─────────────── */
 
 .re-th-bulge {
   position: absolute;
-  border-radius: 999px;
+  border-radius: 10px;
   background: var(--accent);
   opacity: 0;
   pointer-events: none;
-  transition: opacity var(--dur) var(--ease);
+  transition: opacity 220ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 .re-th-bulge.row {
-  left: 8px;
-  width: 14px;
+  left: -2px;
+  width: 16px;
 }
 .re-th-bulge.col {
-  bottom: 8px;
-  height: 14px;
+  bottom: -2px;
+  height: 16px;
 }

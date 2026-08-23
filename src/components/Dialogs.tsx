@@ -16,6 +16,7 @@ import { TIME_FORMATS, formatTime } from '../lib/util'
 import { Minus, Plus } from './icons'
 import { Iv } from './ivIcons'
 import { Sheet } from './Sheet'
+import { useAnimatedClose } from '../hooks/useAnimatedClose'
 
 // ── sheet shell with Cancel / title / Done header ───────────────────────
 
@@ -29,19 +30,21 @@ interface SheetDialogProps {
 }
 
 function SheetDialog({ title, onClose, onDone, doneLabel = 'Done', doneDisabled, children }: SheetDialogProps) {
+  const { closing, close } = useAnimatedClose(onClose)
+
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close()
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
+  }, [close])
 
   return (
     <>
-      <div className="sheet-backdrop" onClick={onClose} aria-hidden />
-      <div className="ios-sheet" role="dialog" aria-label={title}>
+      <div className={`sheet-backdrop${closing ? ' closing' : ''}`} onClick={close} aria-hidden />
+      <div className={`ios-sheet${closing ? ' closing' : ''}`} role="dialog" aria-label={title}>
         <div className="grabber" />
         <div className="sheet-header">
-          <button type="button" className="sheet-action" onClick={onClose}>
+          <button type="button" className="sheet-action" onClick={close}>
             Cancel
           </button>
           <div className="sheet-title">{title}</div>

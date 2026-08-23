@@ -1,4 +1,4 @@
-// src/components/TopBar.tsx — the app bar: brand, live document stats,
+// src/components/TopBar.tsx — the app bar: live document title/stats,
 // undo/redo, theme switch and the primary Generate action.
 
 import { Iv } from './ivIcons'
@@ -46,15 +46,11 @@ export function TopBar({
 
   return (
     <header className="app-bar">
-      <div className="brand">
-        <span className="brand-mark" aria-hidden>
-          <Sparkle size={19} />
-        </span>
-        <span className="min-w-0">
-          <span className="brand-title block">Rich Editor</span>
-          <span className="brand-sub block max-w-[38vw] sm:max-w-[320px]">{title}</span>
-        </span>
-      </div>
+      {/* the document itself is the title — brand lives nowhere in the bar */}
+      <span className="bar-doc-title">
+        <Sparkle size={13} className="shrink-0 opacity-60" aria-hidden />
+        <span className="truncate">{title}</span>
+      </span>
 
       <div className="flex-1" />
 
@@ -65,31 +61,35 @@ export function TopBar({
 
       <span className="mx-1 hidden h-6 w-px bg-ios-sep lg:block" aria-hidden />
 
-      <button
-        type="button"
-        onClick={onUndo}
-        disabled={!canUndo}
-        className="icon-btn"
-        title="Undo (Ctrl+Z)"
-        aria-label="Undo"
-      >
-        <Iv name="undo" size={19} />
-      </button>
-      <button
-        type="button"
-        onClick={onRedo}
-        disabled={!canRedo}
-        className="icon-btn"
-        title="Redo (Ctrl+Shift+Z)"
-        aria-label="Redo"
-      >
-        <Iv name="redo" size={19} />
-      </button>
+      {/* Telegram history pill — undo+redo share one 22px-radius pill */}
+      <div className="history-pill">
+        <button
+          type="button"
+          onClick={onUndo}
+          disabled={!canUndo}
+          className="icon-btn"
+          title="Undo (Ctrl+Z)"
+          aria-label="Undo"
+        >
+          <Iv name="undo" size={20} />
+        </button>
+        <button
+          type="button"
+          onClick={onRedo}
+          disabled={!canRedo}
+          className="icon-btn"
+          title="Redo (Ctrl+Shift+Z)"
+          aria-label="Redo"
+        >
+          <Iv name="redo" size={20} />
+        </button>
+      </div>
 
       <button
         type="button"
         onClick={onCycleTheme}
-        className="icon-btn"
+        className="history-pill icon-btn"
+        style={{ width: 44, height: 44, borderRadius: 22 }}
         title={`${THEME_LABEL[theme]} — click to change`}
         aria-label={`Theme: ${THEME_LABEL[theme]}`}
       >
@@ -99,7 +99,7 @@ export function TopBar({
       <button
         type="button"
         onClick={onGenerate}
-        className="pill-btn primary ml-1.5"
+        className="pill-btn primary ml-0.5"
         title="Generate HTML → Preview → Download"
       >
         <Iv name="send_plane_24" size={16} />

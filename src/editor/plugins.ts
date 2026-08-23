@@ -356,10 +356,30 @@ export const tableSelectionPlugin = () =>
           return meta
         }
 
-        // If we're currently doing multi-cell selection,
-        // don't let normal cursor movement destroy it.
-        if (old.multi) {
-          return old
+        // Editing the document (typing, formatting, deleting) always exits
+        // cell selection — otherwise a stale selection would sit under the
+        // caret and the context menu could pop back up mid-edit.
+        if (tr.docChanged) {
+          return old.cells.length ? { cells: [], multi: false } : old
+        }
+
+        // Moving the caret OUTSIDE the selected block clears it; a caret
+        // move within the selection (e.g. the tap that confirmed a
+        // handle-selection keeps focus inside a selected cell) preserves
+        // it so the handles/menu stay anchored.
+        if (tr.selectionSet && old.cells.length > 0) {
+          const inside = tr.selection.$from.parent === tr.doc.nodeAt(old.cells[0].pos) ||
+            old.cells.some((c) => {
+              const node = tr.doc.nodeAt(c.pos)
+              if (!node) return false
+              const start = c.pos + 1
+              return tr.selection.from >= start && tr.selection.to <= start + node.content.size
+            })
+          if (!inside) {
+            return old.cells.length > 1 || old.multi || old.menu
+              ? { cells: [], multi: false }
+              : old
+          }
         }
 
         return old
@@ -586,6 +606,9 @@ export const tableSelectionPlugin = () =>
                 {
                   cells,
                   multi: cells.length > 0,
+                  // building a selection by hand reveals the cell menu,
+                  // exactly like the drag/long-press gestures
+                  menu: cells.length > 0,
                 },
               ),
             )
@@ -763,7 +786,7 @@ export const tableSelectionPlugin = () =>
                     cell,
                   ],
                   multi: true,
-                  menu: current.menu,
+                  menu: true,
                 },
               ),
             )

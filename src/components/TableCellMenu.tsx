@@ -115,6 +115,9 @@ export function TableCellMenu({ viewRef, cellPos, onClose }: Props) {
     const v = viewRef.current
     if (!v) return
     cmd(v.state, (tr) => v.dispatch(tr))
+    // keep focus out of the document so tapping menu actions never pops the
+    // mobile keyboard up over the menu
+    v.dom.blur()
     // the menu stays open across align clicks (Telegram behavior) — force a
     // re-render so the recomputed common-align moves the `.on` highlight
     setTick((t) => t + 1)
@@ -124,7 +127,10 @@ export function TableCellMenu({ viewRef, cellPos, onClose }: Props) {
   const act = (cmd: Command) => {
     dispatch(cmd)
     const v = viewRef.current
-    if (v) clearTableSelection(v)
+    if (v) {
+      clearTableSelection(v)
+      v.dom.blur()
+    }
     onClose()
   }
 

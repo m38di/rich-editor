@@ -72,6 +72,7 @@ export default function App() {
   const [openMenu, setOpenMenu] = useState<MenuId | null>(null)
   const [preview, setPreview] = useState<PreviewState | null>(null)
   const [toast, setToast] = useState<string | null>(null)
+  const [toastLeaving, setToastLeaving] = useState(false)
   const [slashMuted, setSlashMuted] = useState(false)
   const [cellMenu, setCellMenu] = useState<number[] | null>(null)
   const { keyboardHeight } = useKeyboardViewport()
@@ -80,9 +81,12 @@ export default function App() {
 
   const notify = useCallback((text: string) => {
     setToast(text)
+    setToastLeaving(false)
     if (toastTimer.current) window.clearTimeout(toastTimer.current)
-    toastTimer.current = window.setTimeout(() => setToast(null), 2400)
+    // start the exit animation slightly before unmount
+    toastTimer.current = window.setTimeout(() => setToastLeaving(true), 2200)
   }, [])
+  const clearToast = useCallback(() => setToast(null), [])
 
   const onOpenLink = useCallback(() => setDialog({ type: 'link' }), [])
   const { mountRef, viewRef, selection, slash, run } = useEditorBridge(onOpenLink)
@@ -181,26 +185,35 @@ export default function App() {
   const [viewReady, setViewReady] = useState(false)
   useEffect(() => setViewReady(true), [])
 
+  // Whole-document scans (title, word/char counts) run at most twice a
+  // second — recomputing them on every keystroke made typing feel laggy.
+  const [statsTick, setStatsTick] = useState(0)
+  useEffect(() => {
+    const t = window.setTimeout(() => setStatsTick((n) => n + 1), 500)
+    return () => window.clearTimeout(t)
+  }, [selection, viewReady])
+
   const docHeading = useMemo(() => {
+    void statsTick
     const view = viewRef.current
     return view ? docTitle(view.state.doc) : 'Untitled article'
-    // selection changes on every transaction, which is exactly when the
-    // title can change too
-  }, [viewRef, selection, viewReady])
+  }, [viewRef, selection, statsTick, viewReady])
 
   const words = useMemo(() => {
+    void statsTick
     const view = viewRef.current
     if (!view) return 0
     const text = view.state.doc.textBetween(0, view.state.doc.content.size, ' ', ' ')
     const matched = text.trim().match(/\S+/g)
     return matched ? matched.length : 0
-  }, [viewRef, selection, viewReady])
+  }, [viewRef, selection, statsTick, viewReady])
 
   const chars = useMemo(() => {
+    void statsTick
     const view = viewRef.current
     if (!view) return selection.chars
     return view.state.doc.textBetween(0, view.state.doc.content.size, '', '').length
-  }, [viewRef, selection, viewReady])
+  }, [viewRef, selection, statsTick, viewReady])
 
   return (
     <div className="app-shell">
@@ -252,6 +265,8 @@ export default function App() {
         />
       </main>
 
+      {/* selection formatting — REPLACES the dock on phones, exactly like
+          RichEditor's BOTTOM_PANEL_TOOLBAR ⇄ BOTTOM_PANEL_FORMATTING swap */}
       {showFormatting && (
         <SelectionBar
           info={selection}
@@ -260,12 +275,13 @@ export default function App() {
           onOpenLink={onOpenLink}
           onOpenDate={() => setDialog({ type: 'date' })}
           onOpenMath={() => setDialog({ type: 'math', pos: null, inline: true, tex: '' })}
+          dockBottom={keyboardHeight}
           bottomInset={DOCK_HEIGHT + keyboardHeight}
         />
       )}
 
       <BottomPanel
-        className="md:hidden"
+        className={showFormatting ? 'hidden' : ''}
         info={selection}
         openMenu={openMenu}
         onToggleMenu={toggleMenu}
@@ -399,7 +415,13 @@ export default function App() {
       )}
 
       {toast && (
-        <div className="toast" role="status">
+        <div
+          className={`toast${toastLeaving ? ' leaving' : ''}`}
+          role="status"
+          onAnimationEnd={(e) => {
+            if (e.animationName === 'toast-out') clearToast()
+          }}
+        >
           {toast}
         </div>
       )}

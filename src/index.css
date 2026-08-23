@@ -24,6 +24,12 @@ body,
 
 html {
   -webkit-text-size-adjust: 100%;
+  /* mobile browsers must not inflate text or lay out at 980px */
+  text-size-adjust: 100%;
+}
+body {
+  /* the shell is height-managed; dvh keeps it inside mobile URL-bar chrome */
+  min-height: 100dvh;
 }
 
 body {

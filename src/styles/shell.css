@@ -6,9 +6,32 @@
 .app-shell {
   position: relative;
   height: 100%;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   background: var(--canvas-mesh), var(--canvas);
+}
+
+/* ── app bar on phones ───────────────────────────────────────────────── */
+
+@media (max-width: 767px) {
+  .app-bar,
+  .ios-nav {
+    height: auto;
+    min-height: 52px;
+    gap: 2px;
+    padding-left: 6px;
+    padding-right: 6px;
+  }
+  /* icon buttons shrink to keep every action reachable without crowding */
+  .app-bar .icon-btn {
+    width: 38px;
+    height: 38px;
+  }
+  .app-bar .pill-btn {
+    padding: 0 12px;
+  }
 }
 
 /* ── top app bar ─────────────────────────────────────────────────────── */
@@ -41,6 +64,27 @@
   align-items: center;
   gap: 10px;
   min-width: 0;
+}
+
+/* document title in the app bar — replaces the brand block */
+.bar-doc-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 42vw;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 650;
+  letter-spacing: -0.2px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+@media (min-width: 768px) {
+  .bar-doc-title {
+    font-size: 14.5px;
+    max-width: 46vw;
+  }
 }
 
 .brand-mark {
@@ -77,7 +121,7 @@
 }
 
 .stat-chip {
-  display: inline-flex;
+  display: none; /* hidden by default; utilities re-show it ≥lg */
   align-items: center;
   gap: 5px;
   height: 28px;
@@ -91,6 +135,13 @@
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+/* shell.css loads after Tailwind and beats `hidden lg:inline-flex`, so the
+   breakpoint is enforced here as well */
+@media (min-width: 1024px) {
+  .stat-chip:not(.hidden) {
+    display: inline-flex;
+  }
+}
 .stat-chip .dot {
   width: 5px;
   height: 5px;
@@ -99,6 +150,23 @@
 }
 
 /* ── buttons ─────────────────────────────────────────────────────────── */
+
+/* Telegram history pill: undo+redo share ONE dp(22)-radius white pill
+   (82×44 with two 41px slots); disabled halves dim to 0.35. */
+.history-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 44px;
+  padding: 0 1px;
+  border: 1px solid var(--sep);
+  border-radius: 22px;
+  background: var(--surface);
+  box-shadow: var(--shadow-xs);
+}
+.history-pill .icon-btn {
+  width: 41px;
+  height: 41px;
+}
 
 .icon-btn,
 .ios-icon-btn {
@@ -127,7 +195,7 @@
 }
 .icon-btn:disabled,
 .ios-icon-btn:disabled {
-  opacity: 0.32;
+  opacity: 0.35;
   background: transparent;
   color: var(--faint);
   cursor: default;
@@ -305,85 +373,110 @@
   line-height: 1;
 }
 
-/* ── mobile dock (compose bar) ───────────────────────────────────────── */
+/* ── mobile dock — Telegram bottom toolbar ───────────────────────────────
+   RichEditor.java bottomPanel: dp(8) padding, [44 attach circle] · gap 8 ·
+   [white dp(22) pill of 38×38 icons, clip-to-outline scroll] · gap 8 ·
+   [44 send circle]. Floating over the canvas, no full-width bar. */
 
 .dock,
 .ios-toolbar {
   position: absolute;
   inset: auto 0 0 0;
   z-index: 30;
-  border-top: 1px solid var(--sep);
-  background: var(--bar);
-  -webkit-backdrop-filter: saturate(180%) blur(22px);
-  backdrop-filter: saturate(180%) blur(22px);
-  padding: 8px 10px calc(10px + env(safe-area-inset-bottom));
+  background: transparent;
+  padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
   transition: bottom var(--dur) var(--ease);
 }
 
 .dock-row {
   display: flex;
   align-items: center;
+  justify-content: center; /* the cluster hugs the middle, no dead space */
+  gap: 6px;
+}
+
+/* the white icon pill in the middle — sized to its icons (RichEditor keeps
+   the toolbar pill WRAP_CONTENT, not match_parent) */
+.dock-pill {
+  flex: 0 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
   gap: 2px;
-  max-width: 800px;
-  margin: 0 auto;
+  height: 44px;
+  padding: 2px;
+  border: 1px solid var(--sep);
+  border-radius: 22px;
+  background: var(--surface);
+  -webkit-backdrop-filter: saturate(180%) blur(22px);
+  backdrop-filter: saturate(180%) blur(22px);
+  box-shadow: var(--shadow-sm);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.dock-pill::-webkit-scrollbar {
+  display: none;
 }
 
 .tool-btn {
-  width: 40px;
-  height: 40px;
+  width: 38px;
+  height: 38px;
   flex: 0 0 auto;
   border: none;
-  border-radius: var(--r-sm);
+  border-radius: 19px;
   display: grid;
   place-items: center;
   background: transparent;
-  color: var(--muted);
+  color: var(--text);
   cursor: pointer;
   transition: transform var(--dur-fast) var(--spring), background-color var(--dur-fast) ease,
     color var(--dur-fast) ease;
 }
 .tool-btn:hover {
   background: var(--fill);
-  color: var(--text);
 }
 .tool-btn:active {
   transform: scale(0.9);
   background: var(--fill-2);
 }
 .tool-btn.on {
-  background: var(--accent-tint);
+  background: var(--accent-tint-strong);
   color: var(--accent);
 }
 
+/* Telegram attach circle: 44×44, dp(22) radius, shadow */
 .attach-btn {
-  width: 38px;
-  height: 38px;
+  width: 44px;
+  height: 44px;
   flex: 0 0 auto;
-  border: 1px solid var(--sep);
-  border-radius: var(--r-sm);
+  border: none;
+  border-radius: 22px;
   display: grid;
   place-items: center;
   background: var(--surface);
-  color: var(--accent);
+  color: var(--text);
   cursor: pointer;
-  box-shadow: var(--shadow-xs);
-  transition: transform var(--dur-fast) var(--spring), background-color var(--dur-fast) ease,
-    border-color var(--dur-fast) ease;
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--dur-fast) var(--spring), background-color var(--dur-fast) ease;
 }
 .attach-btn:hover {
-  background: var(--accent-tint);
-  border-color: rgb(var(--c-accent) / 0.3);
+  background: var(--surface-2);
 }
 .attach-btn:active {
   transform: scale(0.9);
 }
+.attach-btn.on {
+  background: var(--accent-tint-strong);
+  color: var(--accent);
+}
 
+/* Telegram send circle: 44×44 accent */
 .send-btn {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   flex: 0 0 auto;
   border: none;
-  border-radius: var(--r-md);
+  border-radius: 22px;
   display: grid;
   place-items: center;
   background: var(--accent-gradient);
@@ -401,22 +494,19 @@
   box-shadow: none;
 }
 
-/* ── selection formatting bar ────────────────────────────────────────── */
+/* ── selection formatting bar — Telegram floating pill trio ───────────── */
 
-.fmt-bar,
-.ios-format {
+/* RichEditor.java: three adjacent white dp(22)-radius pills, each
+   8+44+8 tall, spaced by dp(8), with shadows; the styles row scrolls with
+   48dp edge-fade bands. */
+.fmt-bar {
   display: flex;
   align-items: center;
-  gap: 1px;
-  max-width: min(94vw, 660px);
-  padding: 5px 6px;
-  border: 1px solid var(--sep);
-  border-radius: 999px;
-  background: var(--elevated);
-  -webkit-backdrop-filter: saturate(180%) blur(24px);
-  backdrop-filter: saturate(180%) blur(24px);
-  box-shadow: var(--shadow-lg);
-  overflow-x: auto;
+  gap: 8px;
+  max-width: calc(100vw - 16px);
+}
+.fmt-bar,
+.ios-format {
   scrollbar-width: none;
 }
 .fmt-bar::-webkit-scrollbar,
@@ -424,17 +514,50 @@
   display: none;
 }
 
+.fmt-pill {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 44px;
+  padding: 2px;
+  border-radius: 22px;
+  background: var(--surface);
+  border: 1px solid var(--sep);
+  -webkit-backdrop-filter: saturate(180%) blur(22px);
+  backdrop-filter: saturate(180%) blur(22px);
+  box-shadow: var(--shadow-md);
+  animation: pop-in 260ms var(--spring) backwards;
+}
+.fmt-pill-scroll {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  max-width: calc(100vw - 32px - 220px); /* leave room for the fixed pills */
+}
+@media (max-width: 640px) {
+  /* phones: keep every action reachable — the trio itself scrolls */
+  .fmt-bar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    justify-content: flex-start;
+  }
+  .fmt-pill-scroll {
+    max-width: 72vw;
+  }
+}
+
 .fmt-btn {
-  min-width: 34px;
-  height: 34px;
-  padding: 0 6px;
+  width: 38px;
+  height: 38px;
+  padding: 0;
   flex: 0 0 auto;
   border: none;
-  border-radius: 999px;
+  border-radius: 19px;
   display: grid;
   place-items: center;
   background: transparent;
-  color: var(--muted);
+  color: var(--text);
   font-size: 14px;
   cursor: pointer;
   transition: transform var(--dur-fast) var(--spring), background-color var(--dur-fast) ease,
@@ -442,7 +565,6 @@
 }
 .fmt-btn:hover {
   background: var(--fill);
-  color: var(--text);
 }
 .fmt-btn:active {
   transform: scale(0.88);
@@ -458,19 +580,31 @@
   transform: none;
 }
 
-.fmt-sep {
-  flex: 0 0 auto;
-  width: 1px;
-  height: 20px;
-  margin: 0 5px;
-  background: var(--sep);
-}
-
 /* floating anchored variant (desktop) */
 .fmt-float {
   position: fixed;
   z-index: 45;
   pointer-events: auto;
+}
+/* phone slot: exactly where the dock sat — the panel-swap look */
+.fmt-slot {
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  padding: 8px;
+  padding-bottom: calc(8px + env(safe-area-inset-bottom));
+  animation: panel-swap-in 260ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+@keyframes panel-swap-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 /* ── toast ───────────────────────────────────────────────────────────── */
@@ -499,6 +633,10 @@
   box-shadow: var(--shadow-lg);
   animation: toast-in 320ms var(--spring) both;
 }
+/* fade before the timer unmounts it */
+.toast.leaving {
+  animation: toast-out 200ms ease-in both;
+}
 .dark .toast,
 .dark .ios-banner {
   background: rgba(240, 243, 250, 0.95);
@@ -515,6 +653,29 @@
   to {
     opacity: 1;
     transform: translate(-50%, 0) scale(1);
+  }
+}
+
+@keyframes toast-out {
+  from {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, 10px) scale(0.96);
+  }
+}
+
+/* app shell + paper fade in on first mount */
+@keyframes shell-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -572,4 +733,43 @@
 }
 .animate-fade-in {
   animation: fade-in 200ms ease-out both;
+}
+
+/* first-mount choreography */
+.app-bar {
+  animation: shell-in 360ms var(--ease) backwards;
+}
+.paper {
+  animation: shell-in 420ms var(--spring) backwards;
+}
+.dock {
+  animation: shell-in 400ms var(--spring) backwards;
+}
+
+/* ── mobile comfort ────────────────────────────────────────────────────── */
+
+@media (hover: none) and (pointer: coarse) {
+  .icon-btn,
+  .tool-btn {
+    width: 42px;
+    height: 42px;
+  }
+  .attach-btn,
+  .send-btn {
+    width: 44px;
+    height: 44px;
+  }
+  .pill-btn {
+    height: 40px;
+    padding: 0 16px;
+  }
+  .main-scroll {
+    scroll-behavior: auto; /* JS-driven smooth scrolling fights touch flicks */
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  /* the ribbon is hidden on phones; keep the dock above home-indicator */
+  .dock {
+    padding-bottom: calc(10px + max(env(safe-area-inset-bottom), 6px));
+  }
 }

@@ -12,6 +12,9 @@
   backdrop-filter: blur(3px);
   animation: fade-in 200ms ease-out both;
 }
+.sheet-backdrop.closing {
+  animation: fade-out 200ms ease-out both;
+}
 
 .ios-sheet {
   position: fixed;
@@ -29,6 +32,10 @@
   box-shadow: var(--shadow-lg);
   animation: sheet-up 380ms var(--spring) both;
 }
+/* bottom sheet slides back down */
+.ios-sheet.closing {
+  animation: sheet-down 240ms cubic-bezier(0.5, 0, 0.75, 0.4) both;
+}
 
 @media (min-width: 640px) {
   .ios-sheet {
@@ -36,12 +43,16 @@
     right: auto;
     top: 50%;
     bottom: auto;
-    width: 440px;
-    max-height: 80vh;
+    width: min(440px, calc(100vw - 32px));
+    max-height: min(80vh, 720px);
     padding: 0 12px 12px;
     border: 1px solid var(--sep);
     border-radius: var(--r-xl);
     animation: modal-in 260ms var(--ease) both;
+  }
+  /* desktop modal shrinks away */
+  .ios-sheet.closing {
+    animation: modal-out 180ms ease-in both;
   }
 }
 
@@ -318,8 +329,12 @@ textarea.form-input {
   z-index: 50;
   display: flex;
   flex-direction: column;
+  padding-top: env(safe-area-inset-top);
   background: var(--canvas);
-  animation: fade-in 200ms ease-out both;
+  animation: sheet-up 320ms var(--spring) both;
+}
+.full-sheet.closing {
+  animation: sheet-down 240ms cubic-bezier(0.5, 0, 0.75, 0.4) both;
 }
 
 /* ── popovers (slash menu, gallery menu, cell menu) ──────────────────── */
@@ -493,4 +508,68 @@ textarea.form-input {
 }
 .re-ctx-row.danger {
   color: var(--red);
+}
+
+/* ── exit keyframes (used by the .closing states) ──────────────────────── */
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes sheet-down {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes modal-out {
+  from {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -48%) scale(0.96);
+  }
+}
+
+/* ── touch ergonomics ──────────────────────────────────────────────────── */
+
+@media (hover: none) and (pointer: coarse) {
+  /* comfortable row heights + no hover-dependent affordances */
+  .sheet-row,
+  .popover-row,
+  .re-gal-menu-row,
+  .re-ctx-row {
+    min-height: 44px;
+  }
+  .sheet-action {
+    min-height: 44px;
+  }
+  .ios-seg button {
+    padding: 9px 16px;
+  }
+  /* the sheet can drag-dismiss from its grabber area */
+  .grabber {
+    height: 18px;
+    width: 44px;
+    background: linear-gradient(var(--surface-2) 0 0) center / 40px 4px no-repeat,
+      transparent;
+    border-radius: 999px;
+    cursor: grab;
+    touch-action: none;
+  }
+
+  /* dialogs never exceed the visual viewport with a keyboard open */
+  .ios-sheet {
+    max-height: calc(100dvh - env(safe-area-inset-top) - 24px);
+  }
 }

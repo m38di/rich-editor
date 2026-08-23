@@ -152,6 +152,8 @@ class MediaFigureView implements NodeView {
       const video = document.createElement('video')
       video.src = src
       video.controls = true
+      video.playsInline = true
+      video.preload = 'metadata'
       if (kind === 'animation') video.loop = true
       this.frame.append(video)
     }
@@ -221,6 +223,10 @@ class MediaGroupView implements NodeView {
   private getPos: GetPos
 
   private stage: HTMLElement
+  /** All tiles live here; the pager moves ONE layer (translate3d) instead
+   *  of writing left/top/width/height on every tile every frame — that
+   *  layout thrash was the source of the swipe lag. */
+  private track: HTMLElement
   private dots: HTMLElement
   private addBtn: HTMLButtonElement
   private switchBtn: HTMLButtonElement
@@ -228,6 +234,7 @@ class MediaGroupView implements NodeView {
   private itemMenuIndex = -1
 
   private tiles: HTMLElement[] = []
+  private slideVideos: HTMLVideoElement[] = []
 
   // pager state (RichMediaCell currentPage/pageOffset)
   private page = 0
@@ -239,6 +246,13 @@ class MediaGroupView implements NodeView {
   private lastX = 0
   private lastT = 0
   private velocity = 0
+
+  // geometry cache: recompute only when width, mode or media sizes change,
+  // never per drag frame
+  private geoKey = ''
+  private geo: ReturnType<typeof computeGalleryGeometry> | null = null
+  private relayoutRaf = 0
+  private morphTimer = 0
 
   private ro: ResizeObserver | null = null
   private detached = false
@@ -252,8 +266,9 @@ class MediaGroupView implements NodeView {
     // mousedowns on the caption too, so the caret could never enter it.
     this.dom = el('div', 're-gallery')
     this.stage = el('div', 're-gallery-stage')
+    this.track = el('div', 're-gallery-track')
     this.dots = el('div', 're-gallery-pagerdots')
-    this.stage.append(this.dots)
+    this.stage.append(this.track, this.dots)
 
     this.contentDOM = el('div', 're-caption-slot')
 
@@ -292,12 +307,12 @@ class MediaGroupView implements NodeView {
     })
 
     if (typeof ResizeObserver !== 'undefined') {
-      this.ro = new ResizeObserver(() => this.relayout())
+      this.ro = new ResizeObserver(() => this.scheduleRelayout())
       this.ro.observe(this.dom)
     }
 
     this.render()
-    requestAnimationFrame(() => this.relayout())
+    requestAnimationFrame(() => this.scheduleRelayout())
   }
 
   private items(): MediaItem[] {
@@ -322,11 +337,17 @@ class MediaGroupView implements NodeView {
     const items = this.items()
     const mode = this.node.attrs.mode as string
     this.tiles = []
-    this.stage.innerHTML = ''
+    this.slideVideos = []
+    this.track.innerHTML = ''
     this.stage.dataset.mode = mode
-    this.stage.append(this.dots)
     this.dots.innerHTML = ''
+    if (this.morphTimer) {
+      clearTimeout(this.morphTimer)
+      this.morphTimer = 0
+      this.stage.classList.remove('morphing')
+    }
 
+    const slideCtrls: HTMLElement[] = []
     items.forEach((item, i) => {
       const tile = el('div', 're-gallery-tile')
       if (item.spoiler) tile.classList.add('spoilered')
@@ -337,7 +358,9 @@ class MediaGroupView implements NodeView {
         img.src = item.src
         img.alt = ''
         img.draggable = false
-        img.addEventListener('load', () => this.relayout())
+        img.loading = 'lazy'
+        img.decoding = 'async'
+        img.addEventListener('load', () => this.invalidateGeometry())
         media = img
       } else if (item.kind === 'audio') {
         const audio = document.createElement('audio')
@@ -347,9 +370,20 @@ class MediaGroupView implements NodeView {
       } else {
         const video = document.createElement('video')
         video.src = item.src
-        video.controls = this.isSlideshow()
-        video.addEventListener('loadedmetadata', () => this.relayout())
+        video.playsInline = true
+        video.preload = 'metadata'
+        video.addEventListener('loadedmetadata', () => this.invalidateGeometry())
         if (item.kind === 'animation') video.loop = true
+        if (this.isSlideshow()) {
+          // Slides use the custom overlay controller: native controls would
+          // swallow the horizontal swipes (pointerdown never reaches the
+          // stage over a <video controls>), so they are off here.
+          slideCtrls.push(this.buildSlideController(video, i))
+          this.slideVideos.push(video)
+        } else {
+          // Collage tiles are not swipeable — give videos their native UI.
+          video.controls = true
+        }
         media = video
       }
       media.classList.add('re-gallery-media')
@@ -364,7 +398,11 @@ class MediaGroupView implements NodeView {
         this.openItemMenu(i, dots)
       }
       tile.append(media, dots)
-      this.stage.append(tile)
+      // the slide controller was built before append: video had no parent
+      // yet, so it must be placed into the tile explicitly here
+      const ctrl = slideCtrls.find((c) => c.dataset.for === String(i))
+      if (ctrl) tile.append(ctrl)
+      this.track.append(tile)
       this.tiles.push(tile)
     })
 
@@ -381,15 +419,109 @@ class MediaGroupView implements NodeView {
 
     if (this.page >= items.length) this.page = Math.max(0, items.length - 1)
     this.pageOffset = 0
-    this.relayout()
+    this.invalidateGeometry()
   }
 
-  /** Current visual rect of tile i (buildItemRects + computeGeometry). */
+  /**
+   * Custom slide controller: play/pause button, progress bar and mute toggle
+   * in a small overlay. Native <video controls> would swallow horizontal
+   * swipes — pointerdown over it never reaches the stage — so slides use
+   * this instead and swiping works everywhere on the slide.
+   * Returns the wrapper element; the caller appends it to the tile.
+   */
+  private buildSlideController(video: HTMLVideoElement, index: number): HTMLElement {
+    video.removeAttribute('controls')
+
+    const wrap = el('div', 're-slide-ctrl-wrap re-stop')
+    wrap.dataset.for = String(index)
+    const ctrl = el('div', 're-slide-ctrl')
+
+    const PLAY_SVG =
+      '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden><path d="M8 5.14v13.72c0 .94 1.03 1.51 1.83 1.01l10.36-6.86a1.2 1.2 0 0 0 0-2.02L9.83 4.13A1.2 1.2 0 0 0 8 5.14Z"/></svg>'
+    const PAUSE_SVG =
+      '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden><path d="M7 5h3.4v14H7zM13.6 5H17v14h-3.4z"/></svg>'
+    const VOL_SVG =
+      '<svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden><path d="M4 9v6h3.8L13 19.5v-15L7.8 9H4Z"/><path d="M16.2 8.2a5.4 5.4 0 0 1 0 7.6l-1.3-1.3a3.6 3.6 0 0 0 0-5l1.3-1.3Z"/></svg>'
+    const MUTED_SVG =
+      '<svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden><path d="M4 9v6h3.8L13 19.5v-15L7.8 9H4Z"/><path d="m15.5 9.3 1.3-1.3 2 2 2-2L22 9.3l-2 2 2 2-1.2 1.3-2-2-2 2L15.5 13.3l2-2-2-2Z"/></svg>'
+
+    const playBtn = el('button', 're-slide-play') as HTMLButtonElement
+    playBtn.type = 'button'
+    playBtn.setAttribute('aria-label', 'Play or pause')
+    playBtn.innerHTML = PLAY_SVG
+
+    const bar = el('div', 're-slide-bar')
+    const fill = el('div', 're-slide-fill')
+    bar.append(fill)
+
+    const muteBtn = el('button', 're-slide-mute') as HTMLButtonElement
+    muteBtn.type = 'button'
+    muteBtn.setAttribute('aria-label', 'Mute or unmute')
+    muteBtn.innerHTML = VOL_SVG
+
+    ctrl.append(playBtn, bar, muteBtn)
+    wrap.append(ctrl)
+
+    // progress via scaleX transform — no layout, no repaint of the page
+    const sync = () => {
+      const d = video.duration
+      fill.style.transform = `scaleX(${
+        d && Number.isFinite(d) ? Math.min(1, video.currentTime / d) : 0
+      })`
+      playBtn.innerHTML = video.paused ? PLAY_SVG : PAUSE_SVG
+      muteBtn.innerHTML = video.muted ? MUTED_SVG : VOL_SVG
+    }
+    video.addEventListener('timeupdate', sync)
+    video.addEventListener('play', sync)
+    video.addEventListener('pause', sync)
+
+    playBtn.onclick = (e) => {
+      e.stopPropagation()
+      if (video.paused) {
+        // one playing slide at a time feels right inside a pager
+        for (const v of this.slideVideos) if (v !== video) v.pause()
+        void video.play().catch(() => {})
+      } else video.pause()
+      sync()
+    }
+    muteBtn.onclick = (e) => {
+      e.stopPropagation()
+      video.muted = !video.muted
+      sync()
+    }
+    return wrap
+  }
+
+  /** Pause every playable video in this gallery. */
+  private pauseAllVideos() {
+    this.track.querySelectorAll('video').forEach((v) => v.pause())
+  }
+
+  private invalidateGeometry() {
+    this.geoKey = ''
+    this.scheduleRelayout()
+  }
+
+  /** Coalesce relayout bursts (ResizeObserver + load events) to one per frame. */
+  private scheduleRelayout() {
+    if (this.detached || this.relayoutRaf) return
+    this.relayoutRaf = requestAnimationFrame(() => {
+      this.relayoutRaf = 0
+      this.relayout()
+    })
+  }
+
+  /**
+   * Current visual rect of tile i (buildItemRects + computeGeometry).
+   * Geometry is cached against width/mode/media-ratios; during drags only
+   * ONE compositor write happens — translate3d on the track.
+   */
   private relayout() {
     if (this.detached) return
     const items = this.items()
     const w = this.dom.clientWidth
     if (w <= 0) return
+
     const ratios = this.tiles.map((t) => {
       const m = t.querySelector('.re-gallery-media') as
         | HTMLImageElement
@@ -402,39 +534,55 @@ class MediaGroupView implements NodeView {
       return vw > 0 && vh > 0 ? vw / vh : 1
     })
 
-    const maxSide = Math.max(window.innerWidth, window.innerHeight)
-    const minSide = Math.min(window.innerWidth, window.innerHeight)
-    const geo = computeGalleryGeometry(w, ratios.length ? ratios : [1], maxSide, minSide)
+    // Recompute layout only when something that affects it changed.
+    const key = [w, this.node.attrs.mode, ratios.map((r) => r.toFixed(3)).join(',')]
+      .join('|')
+    let geo = this.geo
+    if (!geo || this.geoKey !== key) {
+      const maxSide = Math.max(window.innerWidth, window.innerHeight)
+      const minSide = Math.min(window.innerWidth, window.innerHeight)
+      geo = computeGalleryGeometry(w, ratios.length ? ratios : [1], maxSide, minSide)
+      this.geo = geo
+      this.geoKey = key
+    }
 
     const slideshow = this.isSlideshow()
     const stageH = items.length === 0
-      ? Math.round(Math.min(200, maxSide * 0.55))
+      ? Math.round(Math.min(200, Math.max(window.innerWidth, window.innerHeight) * 0.55))
       : slideshow
         ? geo.slideH
         : geo.collageH
     this.stage.style.height = `${Math.round(stageH)}px`
 
-    this.tiles.forEach((tile, i) => {
-      let left: number, top: number, width: number, height: number
-      if (slideshow) {
-        width = geo.slideW
-        height = geo.slideH
-        left = (i - this.page - this.pageOffset) * geo.slideW
-        top = 0
-      } else {
+    if (slideshow) {
+      // Slides are laid out once along the track; paging moves the track.
+      this.tiles.forEach((tile, i) => {
+        tile.style.left = `${i * geo.slideW}px`
+        tile.style.top = '0'
+        tile.style.width = `${geo.slideW}px`
+        tile.style.height = `${geo.slideH}px`
+      })
+      this.track.style.width = `${items.length * geo.slideW}px`
+      this.applyPagerTransform()
+    } else {
+      this.track.style.width = '100%'
+      this.track.style.transform = ''
+      this.tiles.forEach((tile, i) => {
         const r = geo.collage[i] ?? { left: 0, top: 0, width: 0, height: 0 }
-        left = r.left
-        top = r.top
-        width = r.width
-        height = r.height
-      }
-      tile.style.left = `${Math.round(left)}px`
-      tile.style.top = `${Math.round(top)}px`
-      tile.style.width = `${Math.round(width)}px`
-      tile.style.height = `${Math.round(height)}px`
-    })
+        tile.style.left = `${Math.round(r.left)}px`
+        tile.style.top = `${Math.round(r.top)}px`
+        tile.style.width = `${Math.round(r.width)}px`
+        tile.style.height = `${Math.round(r.height)}px`
+      })
+    }
 
     this.updateDots(geo)
+  }
+
+  /** The single compositor write while swiping/settling. */
+  private applyPagerTransform() {
+    const w = this.geo?.slideW || this.stage.clientWidth || 1
+    this.track.style.transform = `translate3d(${(-(this.page + this.pageOffset) * w).toFixed(2)}px, 0, 0)`
   }
 
   private updateDots(geo?: { slideW: number }) {
@@ -454,20 +602,25 @@ class MediaGroupView implements NodeView {
 
   private onPointerDown(e: PointerEvent) {
     if (!this.isSlideshow()) return
-    if (e.button !== undefined && e.button !== 0) return
     const target = e.target as HTMLElement
-    if (target.closest('button, audio, video[controls]')) return
+    // The slide controller's buttons keep their clicks; everything else —
+    // including the video surface itself — participates in swiping. Native
+    // <video controls> used to swallow this event entirely.
+    if (target.closest('.re-slide-ctrl')) return
     this.cancelSettle()
     this.downX = this.lastX = e.clientX
     this.downY = e.clientY
     this.lastT = performance.now()
     this.velocity = 0
     this.dragging = false
-    this.stage.setPointerCapture(e.pointerId)
+    try {
+      this.stage.setPointerCapture(e.pointerId)
+    } catch {
+      /* pointer already gone */
+    }
     this.stage.onpointermove = (ev) => this.onPointerMove(ev)
     this.stage.onpointerup = (ev) => this.onPointerUp(ev)
     this.stage.onpointercancel = (ev) => this.onPointerUp(ev)
-    e.preventDefault()
   }
 
   private onPointerMove(e: PointerEvent) {
@@ -490,14 +643,15 @@ class MediaGroupView implements NodeView {
       this.lastX = e.clientX
       this.lastT = now
     }
-    const slideW = this.stage.clientWidth || 1
-    let off = -ddx / slideW
+    let off = -ddx / (this.geo?.slideW || this.stage.clientWidth || 1)
     // rubber-band at the edges (0.3× resistance)
     if ((this.page === 0 && off < 0) || (this.page === this.items().length - 1 && off > 0)) {
       off *= 0.3
     }
     this.pageOffset = off
-    this.relayout()
+    // compositor-only writes while dragging — no layout, no per-tile work
+    this.applyPagerTransform()
+    this.updateDots(this.geo ?? undefined)
     e.preventDefault()
   }
 
@@ -541,14 +695,17 @@ class MediaGroupView implements NodeView {
     const step = () => {
       const t = Math.min(1, (performance.now() - t0) / 220)
       this.pageOffset = from + (to - from) * EASE_OUT_QUINT(t)
-      this.relayout()
+      // compositor-only during the animation too
+      this.applyPagerTransform()
+      this.updateDots(this.geo ?? undefined)
       if (t < 1) {
         this.settleRaf = requestAnimationFrame(step)
       } else {
         this.settleRaf = 0
         this.page = target
         this.pageOffset = 0
-        this.relayout()
+        this.applyPagerTransform()
+        this.updateDots(this.geo ?? undefined)
       }
     }
     this.settleRaf = requestAnimationFrame(step)
@@ -622,13 +779,17 @@ class MediaGroupView implements NodeView {
     const modeChanged = node.attrs.mode !== prevMode
     if (itemsChanged || modeChanged) {
       if (modeChanged) {
-        // onModeChanged: reset pager, morph between geometries
+        // onModeChanged: reset pager, morph between geometries (320ms)
         this.cancelSettle()
         this.page = 0
         this.pageOffset = 0
         this.stage.classList.add('morphing')
         this.render()
-        requestAnimationFrame(() => requestAnimationFrame(() => this.stage.classList.remove('morphing')))
+        if (this.morphTimer) clearTimeout(this.morphTimer)
+        this.morphTimer = window.setTimeout(() => {
+          this.morphTimer = 0
+          this.stage.classList.remove('morphing')
+        }, 340)
       } else {
         this.render()
       }
@@ -639,6 +800,14 @@ class MediaGroupView implements NodeView {
   destroy() {
     this.detached = true
     this.cancelSettle()
+    if (this.morphTimer) {
+      clearTimeout(this.morphTimer)
+      this.morphTimer = 0
+    }
+    if (this.relayoutRaf) {
+      cancelAnimationFrame(this.relayoutRaf)
+      this.relayoutRaf = 0
+    }
     this.ro?.disconnect()
     this.closeItemMenu()
   }
@@ -649,7 +818,9 @@ class MediaGroupView implements NodeView {
    *  reachable by ProseMirror's caret handling. */
   stopEvent(event: Event): boolean {
     const t = event.target as HTMLElement
-    return !!t.closest?.('button, input, .re-gallery-stage, .re-gal-menu, .re-gal-menu-backdrop')
+    return !!t.closest?.(
+      'button, input, .re-gallery-stage, .re-slide-ctrl-wrap, .re-gal-menu, .re-gal-menu-backdrop',
+    )
   }
 }
 
@@ -1056,6 +1227,8 @@ class TableView implements NodeView {
   private getPos: GetPos
 
   private overlay: HTMLElement
+  /** merged accent ring around the whole selected block (selectedStrokePaint) */
+  private selRing: HTMLElement
   private rowBulge: HTMLElement
   private colBulge: HTMLElement
   private rowDots: HTMLElement
@@ -1077,6 +1250,7 @@ class TableView implements NodeView {
     this.dom.appendChild(this.contentDOM)
 
     this.overlay = el('div', 're-table-handles')
+    this.selRing = el('div', 're-th-selring')
     this.rowBulge = el('div', 're-th-bulge row')
     this.colBulge = el('div', 're-th-bulge col')
     this.rowDots = el('div', 're-th-dots row')
@@ -1087,7 +1261,7 @@ class TableView implements NodeView {
       this.rowDots.append(el('span'))
       this.colDots.append(el('span'))
     }
-    this.overlay.append(this.rowBulge, this.colBulge, this.rowDots, this.colDots)
+    this.overlay.append(this.selRing, this.rowBulge, this.colBulge, this.rowDots, this.colDots)
     this.dom.appendChild(this.overlay)
 
     // The handles own their clicks: never let the editor see them (the
@@ -1187,12 +1361,70 @@ class TableView implements NodeView {
     return keys.size > 0 ? keys : null
   }
 
+  /** Host-relative rects of the selected cells, from their live DOM. */
+  private cellRectsForKeys(keys: Set<string>): { left: number; top: number; right: number; bottom: number }[] {
+    const keyToPos = this.anchorCellPositions()
+    if (!keyToPos) return []
+    const hostRect = this.dom.getBoundingClientRect()
+    const rects: { left: number; top: number; right: number; bottom: number }[] = []
+    for (const [k, p] of keyToPos) {
+      if (!keys.has(k)) continue
+      const dom = this.view.nodeDOM(p)
+      if (!(dom instanceof HTMLElement)) continue
+      const r = dom.getBoundingClientRect()
+      rects.push({
+        left: r.left - hostRect.left,
+        top: r.top - hostRect.top,
+        right: r.right - hostRect.left,
+        bottom: r.bottom - hostRect.top,
+      })
+    }
+    return rects
+  }
+
+  /**
+   * The merged accent outline around the whole selected block
+   * (RichTableCellGrid.selectedStrokePaint): one continuous 2px ring with
+   * rounded outer corners drawn around the selection's bounding box,
+   * instead of per-cell boxes. Row/column/drag selections are rectangular,
+   * so this matches Android exactly; scattered Ctrl+click picks get one
+   * clean ring around everything.
+   */
+  private syncSelRing(rects: { left: number; top: number; right: number; bottom: number }[] | null) {
+    const el = this.selRing
+    el.innerHTML = ''
+    if (!rects || rects.length === 0) {
+      el.style.opacity = '0'
+      return
+    }
+    let left = Infinity
+    let top = Infinity
+    let right = -Infinity
+    let bottom = -Infinity
+    for (const r of rects) {
+      left = Math.min(left, r.left)
+      top = Math.min(top, r.top)
+      right = Math.max(right, r.right)
+      bottom = Math.max(bottom, r.bottom)
+    }
+    const seg = document.createElement('div')
+    seg.className = 're-th-selring-seg'
+    const R = Math.min(10, (bottom - top) / 2, (right - left) / 2)
+    seg.style.cssText =
+      `left:${left}px;top:${top}px;width:${right - left}px;height:${bottom - top}px;` +
+      `border-radius:${R}px`
+    el.append(seg)
+    el.style.opacity = '1'
+  }
+
   private sync() {
     const keys = this.selectedKeys()
     const grid = tableToGrid(this.node)
     const hostRect = this.dom.getBoundingClientRect()
     const tableRect = this.contentDOM.getBoundingClientRect()
 
+    // mark the <table> so caret-focus styling can yield to the selection
+    this.contentDOM.classList.toggle('has-cell-selection', !!keys && keys.size > 1)
     // active cell: top-left-most selected anchor, else the caret's cell
     let active: { r: number; c: number } | null = null
     if (keys) {
@@ -1224,6 +1456,8 @@ class TableView implements NodeView {
 
     const visible = !!keys || !!active
     this.overlay.classList.toggle('on', visible)
+    // the merged selection ring shows only for real multi-selections
+    this.syncSelRing(keys && keys.size > 1 ? this.cellRectsForKeys(keys) : null)
     if (!visible || !active) {
       this.rowDots.style.opacity = '0'
       this.colDots.style.opacity = '0'

@@ -6,6 +6,7 @@
 import { useEffect, useState } from 'react'
 import { copyToClipboard, downloadHtml, slugify } from '../editor/exportHtml'
 import { Download, Copy, Xmark, Check } from './icons'
+import { useAnimatedClose } from '../hooks/useAnimatedClose'
 
 interface PreviewSheetProps {
   title: string
@@ -24,14 +25,15 @@ export function PreviewSheet({
 }: PreviewSheetProps) {
   const [tab, setTab] = useState<'preview' | 'html'>('preview')
   const [copied, setCopied] = useState(false)
+  const { closing, close } = useAnimatedClose(onClose)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') close()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
+  }, [close])
 
   const copy = async () => {
     const ok = await copyToClipboard(fragment)
@@ -46,12 +48,17 @@ export function PreviewSheet({
   }
 
   return (
-    <div className="full-sheet" role="dialog" aria-modal="true" aria-label="Generated HTML">
+    <div
+      className={`full-sheet${closing ? ' closing' : ''}`}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Generated HTML"
+    >
       <header className="app-bar">
         <button
           type="button"
           className="icon-btn"
-          onClick={onClose}
+          onClick={close}
           title="Close"
           aria-label="Close preview"
         >

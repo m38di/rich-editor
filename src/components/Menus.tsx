@@ -371,7 +371,7 @@ export function AttachSheet({ run, close, onOpenTableSize }: AttachSheetProps) {
   return (
     <Sheet onClose={close} title="Insert">
       <div className="sheet-card grid grid-cols-3 py-2">
-        {items.map((it) => (
+        {items.map((it, i) => (
           <button
             key={it.label}
             type="button"
@@ -385,6 +385,9 @@ export function AttachSheet({ run, close, onOpenTableSize }: AttachSheetProps) {
               }
             }}
             className="press flex flex-col items-center gap-1.5 rounded-[10px] px-1 py-2.5"
+            style={{
+              animation: `pop-in 260ms var(--spring) ${i * 30}ms backwards`,
+            }}
           >
             <span
               className="grid h-[52px] w-[52px] place-items-center rounded-full text-white shadow-sm"

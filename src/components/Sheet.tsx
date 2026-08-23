@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { Xmark } from './icons'
+import { useAnimatedClose } from '../hooks/useAnimatedClose'
 
 interface SheetProps {
   onClose: () => void
@@ -10,19 +11,26 @@ interface SheetProps {
 }
 
 export function Sheet({ onClose, title, bare, children }: SheetProps) {
+  const { closing, close } = useAnimatedClose(onClose)
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') close()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
+  }, [close])
 
   return (
     <>
-      <div className="sheet-backdrop" onClick={onClose} aria-hidden />
+      <div className={`sheet-backdrop${closing ? ' closing' : ''}`} onClick={close} aria-hidden />
 
-      <div className="ios-sheet" role="dialog" aria-modal="true" aria-label={title}>
+      <div
+        className={`ios-sheet${closing ? ' closing' : ''}`}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+      >
         <div className="grabber" />
 
         {!bare && (
@@ -31,7 +39,7 @@ export function Sheet({ onClose, title, bare, children }: SheetProps) {
             <button
               type="button"
               className="icon-btn"
-              onClick={onClose}
+              onClick={close}
               title="Close"
               aria-label="Close"
             >
