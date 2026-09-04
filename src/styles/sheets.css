@@ -1,0 +1,577 @@
+/* ══════════════════════════════════════════════════════════════════════
+   Sheets, dialogs, grouped forms, popovers.
+   Mobile: bottom sheet. Desktop: centred modal card.
+   ══════════════════════════════════════════════════════════════════════ */
+
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(8, 10, 16, 0.44);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  animation: fade-in 200ms ease-out both;
+}
+.sheet-backdrop.closing {
+  animation: fade-out 200ms ease-out both;
+}
+
+.ios-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 41;
+  display: flex;
+  flex-direction: column;
+  max-height: 84vh;
+  padding: 0 10px calc(12px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--sep);
+  border-radius: var(--r-xl) var(--r-xl) 0 0;
+  background: var(--surface-2);
+  box-shadow: var(--shadow-lg);
+  animation: sheet-up 380ms var(--spring) both;
+}
+/* bottom sheet slides back down */
+.ios-sheet.closing {
+  animation: sheet-down 240ms cubic-bezier(0.5, 0, 0.75, 0.4) both;
+}
+
+@media (min-width: 640px) {
+  .ios-sheet {
+    left: 50%;
+    right: auto;
+    top: 50%;
+    bottom: auto;
+    width: min(440px, calc(100vw - 32px));
+    max-height: min(80vh, 720px);
+    padding: 0 12px 12px;
+    border: 1px solid var(--sep);
+    border-radius: var(--r-xl);
+    animation: modal-in 260ms var(--ease) both;
+  }
+  /* desktop modal shrinks away */
+  .ios-sheet.closing {
+    animation: modal-out 180ms ease-in both;
+  }
+}
+
+.grabber {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 4px;
+  margin: 9px auto 4px;
+  border-radius: 999px;
+  background: var(--fill-3);
+}
+@media (min-width: 640px) {
+  .grabber {
+    display: none;
+  }
+}
+
+/* sheet's own title row (Sheet.tsx) */
+.sheet-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 4px 12px;
+}
+.sheet-head .sheet-heading {
+  flex: 1;
+  min-width: 0;
+  font-size: 16px;
+  font-weight: 680;
+  letter-spacing: -0.3px;
+  color: var(--text);
+}
+@media (min-width: 640px) {
+  .sheet-head {
+    padding: 16px 4px 12px;
+  }
+}
+
+.sheet-scroll {
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: 4px;
+}
+
+/* dialog header with cancel / done actions */
+.sheet-header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 2px 12px;
+}
+@media (min-width: 640px) {
+  .sheet-header {
+    padding: 14px 2px 12px;
+  }
+}
+
+.sheet-title {
+  flex: 1;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 680;
+  letter-spacing: -0.3px;
+  color: var(--text);
+}
+
+.sheet-action {
+  min-width: 64px;
+  padding: 8px 10px;
+  border: none;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--accent);
+  font-size: 14.5px;
+  font-weight: 560;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) ease, opacity var(--dur-fast) ease;
+}
+.sheet-action:hover {
+  background: var(--accent-tint);
+}
+.sheet-action.bold {
+  font-weight: 700;
+}
+.sheet-action:disabled {
+  opacity: 0.35;
+  background: transparent;
+  cursor: default;
+}
+
+/* ── grouped cards + rows ────────────────────────────────────────────── */
+
+.sheet-card {
+  margin: 0 0 10px;
+  border: 1px solid var(--sep);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  overflow: hidden;
+  box-shadow: var(--shadow-xs);
+}
+
+.sheet-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  padding: 9px 14px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 14.5px;
+  font-weight: 520;
+  letter-spacing: -0.15px;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) ease;
+}
+.sheet-row:hover {
+  background: var(--fill);
+}
+.sheet-row:active {
+  background: var(--fill-2);
+}
+.sheet-row + .sheet-row::before {
+  content: '';
+  position: absolute;
+  left: 56px;
+  right: 0;
+  top: 0;
+  height: 1px;
+  background: var(--sep);
+}
+.sheet-row .row-label {
+  flex: 1;
+  min-width: 0;
+}
+.sheet-row .row-sub {
+  margin-top: 1px;
+  font-size: 12.5px;
+  font-weight: 480;
+  color: var(--muted);
+}
+.sheet-row .check {
+  flex: 0 0 auto;
+  color: var(--accent);
+}
+.sheet-row:disabled {
+  opacity: 0.38;
+  background: transparent;
+  cursor: default;
+}
+
+.row-icon {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  box-shadow: var(--shadow-xs);
+}
+
+/* ── grouped form ────────────────────────────────────────────────────── */
+
+.ios-form {
+  margin: 0 0 10px;
+  border: 1px solid var(--sep);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  overflow: hidden;
+  box-shadow: var(--shadow-xs);
+}
+
+.form-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 46px;
+  padding: 7px 14px;
+}
+.form-row + .form-row::before {
+  content: '';
+  position: absolute;
+  left: 14px;
+  right: 0;
+  top: 0;
+  height: 1px;
+  background: var(--sep);
+}
+
+.form-label {
+  flex: 0 0 auto;
+  font-size: 14.5px;
+  font-weight: 560;
+  letter-spacing: -0.15px;
+  color: var(--text);
+}
+
+.form-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  font-size: 14.5px;
+  color: var(--text);
+  text-align: right;
+}
+.form-input::placeholder {
+  color: var(--faint);
+}
+.form-input.left {
+  text-align: left;
+}
+textarea.form-input {
+  text-align: left;
+  resize: none;
+  padding: 9px 0;
+  line-height: 1.5;
+}
+
+.form-hint {
+  padding: 0 4px 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+/* ── segmented control ───────────────────────────────────────────────── */
+
+.ios-seg {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  border: 1px solid var(--sep);
+  border-radius: 999px;
+  background: var(--fill);
+}
+.ios-seg button {
+  padding: 6px 16px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 620;
+  letter-spacing: -0.1px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color var(--dur-fast) ease, background-color var(--dur-fast) ease,
+    box-shadow var(--dur-fast) ease;
+}
+.ios-seg button:hover {
+  color: var(--text);
+}
+.ios-seg button.on {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-xs);
+}
+
+/* ── full-screen sheet (preview) ─────────────────────────────────────── */
+
+.full-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  padding-top: env(safe-area-inset-top);
+  background: var(--canvas);
+  animation: sheet-up 320ms var(--spring) both;
+}
+.full-sheet.closing {
+  animation: sheet-down 240ms cubic-bezier(0.5, 0, 0.75, 0.4) both;
+}
+
+/* ── popovers (slash menu, gallery menu, cell menu) ──────────────────── */
+
+.popover {
+  border: 1px solid var(--sep);
+  border-radius: var(--r-md);
+  background: var(--elevated);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+  box-shadow: var(--shadow-pop);
+  padding: 6px;
+}
+
+.popover-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 9px 11px;
+  border: none;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 520;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) ease;
+}
+.popover-row:hover {
+  background: var(--fill);
+}
+.popover-row.on {
+  background: var(--accent-tint);
+  color: var(--accent);
+}
+.popover-row.danger {
+  color: var(--red);
+}
+.popover-hint {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--faint);
+}
+
+/* per-item gallery menu (nodeviews.ts) */
+.re-gal-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 25;
+}
+.re-gal-menu {
+  position: absolute;
+  z-index: 30;
+  min-width: 232px;
+  padding: 6px;
+  border: 1px solid var(--sep);
+  border-radius: var(--r-md);
+  background: var(--elevated);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+  box-shadow: var(--shadow-pop);
+  animation: pop-in 180ms var(--spring) both;
+}
+.re-gal-menu-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 9px 12px;
+  border: none;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 520;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) ease;
+}
+.re-gal-menu-row:hover {
+  background: var(--fill);
+}
+.re-gal-menu-row.danger {
+  color: var(--red);
+}
+
+/* table cell-selection context menu (TableCellMenu.tsx).
+   OPAQUE background, deliberately NO backdrop-filter: a translucent blurred
+   layer floating fixed over a scroll container makes the composited content
+   beneath it fail to paint on some mobile GPUs — the table literally
+   vanished when this menu opened. */
+.re-ctx-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+}
+.re-ctx-menu {
+  position: fixed;
+  z-index: 61;
+  width: 264px;
+  padding: 6px;
+  border: 1px solid var(--sep);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-pop);
+  animation: pop-in 180ms var(--spring) both;
+}
+.re-ctx-title {
+  padding: 7px 0 3px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.re-ctx-align-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 6px 8px;
+}
+.re-ctx-align-gap {
+  width: 10px;
+}
+.re-ctx-align-btn {
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: var(--r-xs);
+  display: grid;
+  place-items: center;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
+}
+.re-ctx-align-btn:hover {
+  background: var(--fill);
+  color: var(--text);
+}
+.re-ctx-align-btn.on {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.re-ctx-sep {
+  height: 1px;
+  margin: 3px 10px 5px;
+  background: var(--sep);
+}
+.re-ctx-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 9px 12px;
+  border: none;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 520;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) ease;
+}
+.re-ctx-row:hover {
+  background: var(--fill);
+}
+.re-ctx-row.danger {
+  color: var(--red);
+}
+
+/* ── exit keyframes (used by the .closing states) ──────────────────────── */
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes sheet-down {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes modal-out {
+  from {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -48%) scale(0.96);
+  }
+}
+
+/* ── touch ergonomics ──────────────────────────────────────────────────── */
+
+@media (hover: none) and (pointer: coarse) {
+  /* comfortable row heights + no hover-dependent affordances */
+  .sheet-row,
+  .popover-row,
+  .re-gal-menu-row,
+  .re-ctx-row {
+    min-height: 44px;
+  }
+  .sheet-action {
+    min-height: 44px;
+  }
+  .ios-seg button {
+    padding: 9px 16px;
+  }
+  /* the sheet can drag-dismiss from its grabber area */
+  .grabber {
+    height: 18px;
+    width: 44px;
+    background: linear-gradient(var(--surface-2) 0 0) center / 40px 4px no-repeat,
+      transparent;
+    border-radius: 999px;
+    cursor: grab;
+    touch-action: none;
+  }
+
+  /* dialogs never exceed the visual viewport with a keyboard open */
+  .ios-sheet {
+    max-height: calc(100dvh - env(safe-area-inset-top) - 24px);
+  }
+}

@@ -1,0 +1,1374 @@
+// src/components/Dialogs.tsx
+//
+// iOS grabber-sheets with grouped forms (Cancel · title · Done header),
+// replacing the Android dialogs: link/anchor, date (tg-time), LaTeX with
+// live preview, location, table size and caption.
+
+import { useEffect, useState } from 'react'
+import { Command, TextSelection } from 'prosemirror-state'
+import { EditorView } from 'prosemirror-view'
+import katex from 'katex'
+import { N, RowButton, ButtonStyle, ButtonType, ButtonParams } from '../editor/schema'
+import { setLink, removeLink, insertAnchor, insertTime, insertCustomEmoji, collectAnchors } from '../editor/commands'
+import { setTableCaption, insertTableCmd } from '../editor/tableCommands'
+import { OrderedListType, setOrderedListAttrs } from '../editor/commands'
+import { TIME_FORMATS, formatTime } from '../lib/util'
+import { Check, Minus, Plus } from './icons'
+import { Iv } from './ivIcons'
+import { Sheet } from './Sheet'
+import { useAnimatedClose } from '../hooks/useAnimatedClose'
+
+// ── sheet shell with Cancel / title / Done header ───────────────────────
+
+interface SheetDialogProps {
+  title: string
+  onClose: () => void
+  onDone: () => void
+  doneLabel?: string
+  doneDisabled?: boolean
+  children: React.ReactNode
+}
+
+function SheetDialog({ title, onClose, onDone, doneLabel = 'Done', doneDisabled, children }: SheetDialogProps) {
+  const { closing, close } = useAnimatedClose(onClose)
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close()
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [close])
+
+  return (
+    <>
+      <div className={`sheet-backdrop${closing ? ' closing' : ''}`} onClick={close} aria-hidden />
+      <div className={`ios-sheet${closing ? ' closing' : ''}`} role="dialog" aria-label={title}>
+        <div className="grabber" />
+        <div className="sheet-header">
+          <button type="button" className="sheet-action" onClick={close}>
+            Cancel
+          </button>
+          <div className="sheet-title">{title}</div>
+          <button
+            type="button"
+            className="sheet-action bold"
+            onClick={onDone}
+            disabled={doneDisabled}
+          >
+            {doneLabel}
+          </button>
+        </div>
+        <div className="sheet-scroll">{children}</div>
+      </div>
+    </>
+  )
+}
+
+const chip = (active: boolean) =>
+  `rounded-full border px-3 py-1 text-[12.5px] font-medium transition active:scale-95 ${
+    active
+      ? 'border-ios-blue bg-ios-blue/10 text-ios-blue'
+      : 'border-ios-sep bg-ios-card text-ios-secondary'
+  }`
+
+// ── custom emoji dialog (Android: custom emoji entity → tg-emoji) ───────
+
+interface EmojiDialogProps {
+  viewRef: React.MutableRefObject<EditorView | null>
+  run: (cmd: Command) => void
+  pos: number | null
+  initialEmojiId?: string
+  initialEmoji?: string
+  onClose: () => void
+  notify: (t: string) => void
+}
+
+export function EmojiDialog({
+  viewRef,
+  run,
+  pos,
+  initialEmojiId = '',
+  initialEmoji = '',
+  onClose,
+  notify,
+}: EmojiDialogProps) {
+  const [emojiId, setEmojiId] = useState(initialEmojiId)
+  const [emoji, setEmoji] = useState(initialEmoji)
+
+  const apply = () => {
+    const id = emojiId.trim()
+    const em = emoji.trim()
+    if (!id || !em) return
+
+    const view = viewRef.current
+    if (pos !== null && view) {
+      const node = view.state.doc.nodeAt(pos)
+      if (node) {
+        view.dispatch(view.state.tr.setNodeMarkup(pos, undefined, { emojiId: id, emoji: em }))
+        view.focus()
+        onClose()
+        return
+      }
+    }
+
+    run(insertCustomEmoji(id, em))
+    notify('Custom emoji inserted')
+    onClose()
+  }
+
+  return (
+    <SheetDialog
+      title="Custom Emoji"
+      onClose={onClose}
+      onDone={apply}
+      doneLabel={pos !== null ? 'Save' : 'Insert'}
+      doneDisabled={!emojiId.trim() || !emoji.trim()}
+    >
+      <div className="px-2 pb-2">
+        <div className="ios-form">
+          <div className="form-row">
+            <span className="form-label">Emoji ID</span>
+            <input
+              className="form-input tabular-nums"
+              value={emojiId}
+              autoFocus
+              onChange={(e) => setEmojiId(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && apply()}
+              placeholder="5445241975471103753"
+              aria-label="Custom emoji ID"
+              autoCapitalize="off"
+              autoCorrect="off"
+              spellCheck={false}
+            />
+          </div>
+          <div className="form-row">
+            <span className="form-label">Emoji</span>
+            <input
+              className="form-input"
+              value={emoji}
+              onChange={(e) => setEmoji(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && apply()}
+              placeholder="🗒"
+              aria-label="Fallback emoji"
+            />
+          </div>
+        </div>
+        <p className="form-hint">
+          Emoji ID is the Telegram document_id of the custom emoji. Exported as
+          &lt;tg-emoji emoji-id&gt; with the fallback emoji as its text content.
+        </p>
+      </div>
+    </SheetDialog>
+  )
+}
+
+//
+
+interface OrderedListDialogProps {
+  viewRef: React.MutableRefObject<EditorView | null>
+  pos: number
+  onClose: () => void
+}
+
+export function OrderedListDialog({
+  viewRef,
+  pos,
+  onClose,
+}: OrderedListDialogProps) {
+  const node = viewRef.current?.state.doc.nodeAt(pos)
+
+  const [type, setType] = useState<OrderedListType>(
+    node?.attrs.type ?? '1',
+  )
+
+  const [start, setStart] = useState(
+    String(node?.attrs.start ?? 1),
+  )
+
+  const apply = () => {
+    const view = viewRef.current
+
+    if (!view) return
+
+    const value = Math.max(
+      1,
+      Number.parseInt(start, 10) || 1,
+    )
+
+    setOrderedListAttrs(pos, value, type)(
+      view.state,
+      (tr) => view.dispatch(tr),
+    )
+
+    view.focus()
+    onClose()
+  }
+
+  return (
+    <Sheet onClose={onClose} title="Ordered List">
+      <div className="sheet-card">
+        <div className="px-4 py-3">
+          <div className="mb-2 text-[13px] font-semibold text-ios-secondary">
+            Type
+          </div>
+
+          <div className="grid grid-cols-5 gap-1.5">
+            {(['1', 'A', 'a', 'I', 'i'] as OrderedListType[]).map((value) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setType(value)}
+                className={[
+                  'grid h-10 place-items-center rounded-[9px]',
+                  'text-[15px] font-semibold transition',
+                  type === value
+                    ? 'bg-ios-blue text-white'
+                    : 'bg-ios-fill text-ios-label',
+                ].join(' ')}
+              >
+                {value}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="sheet-card">
+        <label className="block px-4 py-3">
+          <span className="mb-1.5 block text-[13px] font-semibold text-ios-secondary">
+            Start
+          </span>
+
+          <input
+            type="number"
+            min={1}
+            value={start}
+            onChange={(e) => setStart(e.target.value)}
+            className="w-full rounded-[10px] bg-ios-fill px-3 py-2.5 text-[16px] text-ios-label outline-none"
+          />
+        </label>
+      </div>
+
+      <div className="sheet-card">
+        <button
+          type="button"
+          onClick={apply}
+          className="w-full px-4 py-3 text-[16px] font-semibold text-ios-blue"
+        >
+          Done
+        </button>
+      </div>
+    </Sheet>
+  )
+}
+
+//
+
+interface MediaUrlDialogProps {
+  onClose: () => void
+  onAdd: (urls: string[]) => void
+}
+
+export function MediaUrlDialog({
+  onClose,
+  onAdd,
+}: {
+  onClose: () => void
+  onAdd: (media: {
+    url: string
+    kind: 'image' | 'video' | 'audio' | 'document'
+  }) => void
+}) {
+  const [url, setUrl] = useState('')
+  const [checked, setChecked] = useState(false)
+  const [checking, setChecking] = useState(false)
+  const [kind, setKind] = useState<'image' | 'video' | 'audio' | 'document' | null>(null)
+
+  const checkUrl = async () => {
+    const value = url.trim()
+    if (!value) return
+  
+    setChecking(true)
+    setChecked(false)
+    setKind(null)
+  
+    try {
+      let contentType = ''
+  
+      // 1. Try HEAD first
+      try {
+        const response = await fetch(value, {
+          method: 'HEAD',
+        })
+  
+        contentType =
+          response.headers.get('content-type')?.toLowerCase() ?? ''
+      } catch (error) {
+        console.warn('HEAD request failed:', error)
+      }
+  
+      // 2. If HEAD didn't tell us the type, try a tiny Range request
+      if (!contentType || ['application/octet-stream', 'binary/octet-stream'].includes(contentType)) {
+        try {
+          const controller = new AbortController()
+  
+          const response = await fetch(value, {
+            method: 'GET',
+            headers: {
+              Range: 'bytes=0-31',
+            },
+            signal: controller.signal,
+          })
+  
+          contentType =
+            response.headers.get('content-type')?.toLowerCase() ?? ''
+  
+          // We only needed the headers.
+          controller.abort()
+        } catch (error) {
+          // AbortError is expected because we're intentionally
+          // stopping the range request.
+          if (error instanceof DOMException && error.name === 'AbortError') {
+            // expected
+          } else {
+            console.warn('Range request failed:', error)
+          }
+        }
+      }
+  
+      let detectedKind: 'image' | 'video' | 'audio' | 'document' | null = null
+
+      if (contentType.startsWith('image/')) {
+        detectedKind = 'image'
+      } else if (contentType.startsWith('video/')) {
+        detectedKind = 'video'
+      } else if (contentType.startsWith('audio/')) {
+        detectedKind = 'audio'
+      } else if (
+        contentType.startsWith('application/') ||
+        contentType === '' // no/unknown type → treat as a generic file
+      ) {
+        detectedKind = 'document'
+      }
+  
+      console.log('Media Content-Type:', contentType)
+      console.log('Detected kind:', detectedKind)
+  
+      setKind(detectedKind)
+      setChecked(true)
+    } catch (error) {
+      console.error('Media check failed:', error)
+  
+      setKind(null)
+      setChecked(true)
+    } finally {
+      setChecking(false)
+    }
+  }
+
+  const apply = () => {
+    const value = url.trim()
+  
+    if (!value || !checked || !kind) return
+  
+    onAdd({
+      url: value,
+      kind,
+    })
+  
+    onClose()
+  }
+
+  const onUrlChange = (value: string) => {
+    setUrl(value)
+    setChecked(false)
+    setKind(null)
+  }
+
+  return (
+    <SheetDialog
+      title="Add Media"
+      onClose={onClose}
+      onDone={apply}
+      doneLabel="Add"
+      doneDisabled={!checked || !kind}
+    >
+      <div className="px-2 pb-2">
+        <div className="ios-form">
+          <div className="form-row flex items-center gap-2">
+            <input
+              className="form-input left flex-1"
+              type="url"
+              value={url}
+              autoFocus
+              placeholder="https://example.com/image.jpg"
+              onChange={(e) => onUrlChange(e.target.value)}
+              autoCapitalize="off"
+              autoCorrect="off"
+              spellCheck={false}
+            />
+          
+            <button
+              type="button"
+              disabled={!url.trim() || checking}
+              onClick={checkUrl}
+              className="
+                shrink-0
+                rounded-[10px]
+                px-3
+                py-2
+                text-[15px]
+                font-semibold
+                text-ios-blue
+                disabled:opacity-40
+              "
+            >
+              {checking ? 'Checking...' : 'Check'}
+            </button>
+          </div>
+        </div>
+
+        <p className="form-hint">
+          Check the URL before adding media.
+        </p>
+        {checked && kind === null && (
+          <div className="mt-3 px-2">
+            <div className="mb-2 text-[13px] font-semibold text-ios-secondary">
+              Select media type
+            </div>
+        
+            <div className="grid grid-cols-4 gap-1.5">
+              {(['image', 'video', 'audio', 'document'] as const).map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setKind(value)}
+                  className={[
+                    'grid h-10 place-items-center rounded-[9px]',
+                    'text-[15px] font-semibold transition',
+                    kind === value
+                      ? 'bg-ios-blue text-white'
+                      : 'bg-ios-fill text-ios-label',
+                  ].join(' ')}
+                >
+                  {value[0].toUpperCase() + value.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </SheetDialog>
+  )
+}
+
+// ── link dialog ─────────────────────────────────────────────────────────
+
+interface LinkDialogProps {
+  viewRef: React.MutableRefObject<EditorView | null>
+  run: (cmd: Command) => void
+  initialHref: string | null
+  onClose: () => void
+  notify: (t: string) => void
+}
+
+export function LinkDialog({ viewRef, run, initialHref, onClose, notify }: LinkDialogProps) {
+  const [tab, setTab] = useState<'link' | 'anchor'>('link')
+  const [href, setHref] = useState(initialHref || 'https://')
+  const [name, setName] = useState('')
+  const anchors = viewRef.current ? collectAnchors(viewRef.current.state) : []
+
+  const apply = () => {
+    if (tab === 'link') {
+      const value = href.trim()
+      if (!value || value === 'https://') return
+      if (viewRef.current?.state.selection.empty) {
+        notify('Select some text first')
+        return
+      }
+      run(setLink(value))
+      notify('Link applied')
+      onClose()
+    } else {
+      const n = name.trim().replace(/\s+/g, '-')
+      if (!n) return
+      run(insertAnchor(n))
+      notify(`Anchor “${n}” inserted`)
+      onClose()
+    }
+  }
+
+  return (
+    <SheetDialog title="Link" onClose={onClose} onDone={apply} doneLabel={tab === 'link' ? 'Apply' : 'Insert'}>
+      <div className="px-2 pb-2">
+        <div className="ios-seg mx-auto mb-3 flex w-full">
+          <button type="button" className={tab === 'link' ? 'on flex-1' : 'flex-1'} onClick={() => setTab('link')}>
+            Insert link
+          </button>
+          <button type="button" className={tab === 'anchor' ? 'on flex-1' : 'flex-1'} onClick={() => setTab('anchor')}>
+            Chapter anchor
+          </button>
+        </div>
+
+        {tab === 'link' ? (
+          <>
+            <div className="ios-form">
+              <div className="form-row">
+                <input
+                  className="form-input left"
+                  value={href}
+                  autoFocus
+                  onChange={(e) => setHref(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && apply()}
+                  placeholder="https://, mailto:, tel:, tg://user?id=…, #anchor"
+                  aria-label="Link URL"
+                  autoCapitalize="off"
+                  autoCorrect="off"
+                />
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-1.5 px-2 pb-2">
+              {['https://', 'mailto:', 'tel:', 'tg://user?id='].map((p) => (
+                <button key={p} type="button" className={chip(false)} onClick={() => setHref(p)}>
+                  {p}
+                </button>
+              ))}
+              {anchors.map((a) => (
+                <button
+                  key={a}
+                  type="button"
+                  className={chip(false)}
+                  title="In-document link"
+                  onClick={() => setHref(`#${a}`)}
+                >
+                  #{a}
+                </button>
+              ))}
+            </div>
+            {initialHref && (
+              <div className="ios-form">
+                <button
+                  type="button"
+                  className="sheet-row justify-center"
+                  onClick={() => {
+                    run(removeLink)
+                    onClose()
+                  }}
+                >
+                  <span className="text-[16px] font-medium text-ios-red">Remove link</span>
+                </button>
+              </div>
+            )}
+            <p className="form-hint">Select text in the editor, then Apply.</p>
+          </>
+        ) : (
+          <>
+            <div className="ios-form">
+              <div className="form-row">
+                <input
+                  className="form-input left"
+                  value={name}
+                  autoFocus
+                  onChange={(e) => setName(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && apply()}
+                  placeholder="chapter-1"
+                  aria-label="Anchor name"
+                  autoCapitalize="off"
+                />
+              </div>
+            </div>
+            <p className="form-hint">
+              Inserts &lt;a name="…"&gt;&lt;/a&gt; at the cursor — link to it anywhere with #name.
+            </p>
+          </>
+        )}
+      </div>
+    </SheetDialog>
+  )
+}
+
+// ── date dialog (FormattedDate → tg-time) ───────────────────────────────
+
+interface DateDialogProps {
+  run: (cmd: Command) => void
+  onClose: () => void
+  notify: (t: string) => void
+}
+
+function toLocalInputValue(d: Date): string {
+  const p = (n: number) => (n < 10 ? `0${n}` : String(n))
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`
+}
+
+export function DateDialog({ run, onClose, notify }: DateDialogProps) {
+  const [when, setWhen] = useState(() => toLocalInputValue(new Date(Date.now() + 3600_000)))
+  const [code, setCode] = useState('wDT')
+  const unix = Math.floor(new Date(when).getTime() / 1000) || 0
+  const display = formatTime(unix, code)
+
+  return (
+    <SheetDialog
+      title="Date & Time"
+      onClose={onClose}
+      onDone={() => {
+        run(insertTime(unix, code, display))
+        notify('Date inserted')
+        onClose()
+      }}
+      doneLabel="Insert"
+    >
+      <div className="px-2 pb-2">
+        <div className="ios-form">
+          <div className="form-row">
+            <input
+              type="datetime-local"
+              className="form-input left"
+              value={when}
+              onChange={(e) => setWhen(e.target.value)}
+              aria-label="Date and time"
+            />
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-1.5 px-2 py-2">
+          {TIME_FORMATS.map((f) => (
+            <button key={f.code} type="button" className={chip(code === f.code)} title={f.example} onClick={() => setCode(f.code)}>
+              {f.code}
+            </button>
+          ))}
+        </div>
+        <div className="ios-form">
+          <div className="form-row">
+            <span className="form-label text-ios-secondary">Preview</span>
+            <span className="flex-1 text-right text-[16px] font-semibold text-ios-blue">📅 {display}</span>
+          </div>
+        </div>
+      </div>
+    </SheetDialog>
+  )
+}
+
+// ── math dialog (live KaTeX preview) ────────────────────────────────────
+
+interface MathDialogProps {
+  viewRef: React.MutableRefObject<EditorView | null>
+  run: (cmd: Command) => void
+  pos: number | null
+  inline: boolean
+  initialTex: string
+  onClose: () => void
+  notify: (t: string) => void
+}
+
+function insertMathBlockWith(tex: string): Command {
+  return (state, dispatch) => {
+    if (dispatch) {
+      const { $from } = state.selection
+      const after = $from.after(1)
+      const node = N.math_block.create({ tex })
+      let tr = state.tr.insert(after, node)
+      tr = tr.insert(after + node.nodeSize, N.paragraph.create())
+      tr = tr.setSelection(TextSelection.create(tr.doc, after + node.nodeSize + 1))
+      dispatch(tr.scrollIntoView())
+    }
+    return true
+  }
+}
+
+export function MathDialog({ viewRef, run, pos, inline, initialTex, onClose, notify }: MathDialogProps) {
+  const [tex, setTex] = useState(initialTex)
+  const [previewEl, setPreviewEl] = useState<HTMLElement | null>(null)
+
+  useEffect(() => {
+    if (!previewEl) return
+    try {
+      katex.render(tex || '\\;', previewEl, { throwOnError: false, displayMode: !inline })
+    } catch {
+      previewEl.textContent = tex
+    }
+  }, [tex, inline, previewEl])
+
+  const apply = () => {
+    const view = viewRef.current
+    if (pos !== null && view) {
+      const node = view.state.doc.nodeAt(pos)
+      if (node) {
+        view.dispatch(view.state.tr.setNodeMarkup(pos, undefined, { ...node.attrs, tex }))
+        view.focus()
+        onClose()
+        return
+      }
+    }
+    if (inline) {
+      run((state, dispatch) => {
+        if (dispatch) dispatch(state.tr.replaceSelectionWith(N.math_inline.create({ tex })))
+        return true
+      })
+    } else {
+      run(insertMathBlockWith(tex))
+    }
+    notify('Formula inserted')
+    onClose()
+  }
+
+  return (
+    <SheetDialog
+      title={inline ? 'Inline Math' : 'Math Block'}
+      onClose={onClose}
+      onDone={apply}
+      doneLabel={pos !== null ? 'Save' : 'Insert'}
+      doneDisabled={!tex.trim()}
+    >
+      <div className="px-2 pb-2">
+        <div className="ios-form">
+          <div className="form-row">
+            <textarea
+              className="form-input font-mono text-[14.5px]"
+              rows={3}
+              value={tex}
+              autoFocus
+              onChange={(e) => setTex(e.target.value)}
+              placeholder="E = mc^2"
+              aria-label="LaTeX source"
+            />
+          </div>
+        </div>
+        <div
+          ref={setPreviewEl}
+          className="ios-form grid min-h-[64px] place-items-center overflow-x-auto px-4 py-3"
+          aria-label="Formula preview"
+        />
+        <p className="form-hint">
+          Live preview · exported as &lt;tg-math{inline ? '' : '-block'}&gt;
+        </p>
+      </div>
+    </SheetDialog>
+  )
+}
+
+// ── map dialog ──────────────────────────────────────────────────────────
+
+interface MapDialogProps {
+  viewRef: React.MutableRefObject<EditorView | null>
+  run: (cmd: Command) => void
+  pos: number | null
+  initial: { lat: number; long: number; zoom: number }
+  onClose: () => void
+  notify: (t: string) => void
+}
+
+function insertMapWith(lat: number, long: number, zoom: number): Command {
+  return (state, dispatch) => {
+    if (dispatch) {
+      const { $from } = state.selection
+      const after = $from.after(1)
+      const node = N.map_block.create({ lat, long, zoom })
+      let tr = state.tr.insert(after, node)
+      tr = tr.insert(after + node.nodeSize, N.paragraph.create())
+      tr = tr.setSelection(TextSelection.create(tr.doc, after + node.nodeSize + 1))
+      dispatch(tr.scrollIntoView())
+    }
+    return true
+  }
+}
+
+export function MapDialog({ viewRef, run, pos, initial, onClose, notify }: MapDialogProps) {
+  const [lat, setLat] = useState(String(initial.lat))
+  const [long, setLong] = useState(String(initial.long))
+  const [zoom, setZoom] = useState(String(initial.zoom))
+
+  const geolocate = () => {
+    if (!navigator.geolocation) {
+      notify('Geolocation is not available in this browser')
+      return
+    }
+    navigator.geolocation.getCurrentPosition(
+      (p) => {
+        setLat(p.coords.latitude.toFixed(5))
+        setLong(p.coords.longitude.toFixed(5))
+        notify('Location captured')
+      },
+      () => notify('Could not get location'),
+    )
+  }
+
+  const apply = () => {
+    const la = Number(lat)
+    const lo = Number(long)
+    const z = Math.max(1, Math.min(20, Number(zoom) || 15))
+    if (Number.isNaN(la) || Number.isNaN(lo)) return
+    const view = viewRef.current
+    if (pos !== null && view) {
+      const node = view.state.doc.nodeAt(pos)
+      if (node) {
+        view.dispatch(view.state.tr.setNodeMarkup(pos, undefined, { lat: la, long: lo, zoom: z }))
+        view.focus()
+        onClose()
+        return
+      }
+    }
+    run(insertMapWith(la, lo, z))
+    notify('Map inserted')
+    onClose()
+  }
+
+  return (
+    <SheetDialog title="Location" onClose={onClose} onDone={apply} doneLabel={pos !== null ? 'Save' : 'Insert'}>
+      <div className="px-2 pb-2">
+        <div className="ios-form">
+          <div className="form-row">
+            <span className="form-label">Latitude</span>
+            <input className="form-input tabular-nums" value={lat} onChange={(e) => setLat(e.target.value)} inputMode="decimal" />
+          </div>
+          <div className="form-row">
+            <span className="form-label">Longitude</span>
+            <input className="form-input tabular-nums" value={long} onChange={(e) => setLong(e.target.value)} inputMode="decimal" />
+          </div>
+          <div className="form-row gap-3">
+            <span className="form-label">Zoom</span>
+            <input
+              type="range"
+              min={1}
+              max={20}
+              value={Number(zoom) || 15}
+              onChange={(e) => setZoom(e.target.value)}
+              className="flex-1"
+              style={{ accentColor: '#007AFF' }}
+            />
+            <span className="w-7 text-right text-[16px] font-semibold tabular-nums text-ios-blue">{zoom}</span>
+          </div>
+        </div>
+        <div className="ios-form">
+          <button type="button" className="sheet-row" onClick={geolocate}>
+            <span className="row-icon" style={{ background: '#34C759' }}>
+              <Iv name="location" size={17} />
+            </span>
+            <span className="row-label text-ios-blue">Use My Location</span>
+          </button>
+        </div>
+      </div>
+    </SheetDialog>
+  )
+}
+
+// ── table size dialog ───────────────────────────────────────────────────
+
+interface TableSizeDialogProps {
+  run: (cmd: Command) => void
+  onClose: () => void
+}
+
+export function TableSizeDialog({ run, onClose }: TableSizeDialogProps) {
+  const [rows, setRows] = useState(3)
+  const [cols, setCols] = useState(3)
+
+  const stepper = (value: number, set: (n: number) => void, min: number, max: number, label: string) => (
+    <div className="form-row">
+      <span className="form-label">{label}</span>
+      <div className="flex flex-1 items-center justify-end gap-3">
+        <button
+          type="button"
+          aria-label={`Decrease ${label.toLowerCase()}`}
+          className="grid h-7 w-7 place-items-center rounded-full border-[1.5px] border-ios-blue text-ios-blue transition active:scale-90 disabled:opacity-30"
+          disabled={value <= min}
+          onClick={() => set(Math.max(min, value - 1))}
+        >
+          <Minus size={14} />
+        </button>
+        <span className="w-6 text-center text-[17px] font-semibold tabular-nums">{value}</span>
+        <button
+          type="button"
+          aria-label={`Increase ${label.toLowerCase()}`}
+          className="grid h-7 w-7 place-items-center rounded-full border-[1.5px] border-ios-blue text-ios-blue transition active:scale-90 disabled:opacity-30"
+          disabled={value >= max}
+          onClick={() => set(Math.min(max, value + 1))}
+        >
+          <Plus size={14} />
+        </button>
+      </div>
+    </div>
+  )
+
+  return (
+    <SheetDialog
+      title="Insert Table"
+      onClose={onClose}
+      onDone={() => {
+        run(insertTableCmd(rows, cols))
+        onClose()
+      }}
+      doneLabel={`Insert ${rows}×${cols}`}
+    >
+      <div className="px-2 pb-2">
+        <div className="ios-form">
+          {stepper(rows, setRows, 1, 20, 'Rows')}
+          {stepper(cols, setCols, 1, 10, 'Columns')}
+        </div>
+        <p className="form-hint">The first row becomes a header row.</p>
+      </div>
+    </SheetDialog>
+  )
+}
+
+// ── row-button dialog (RichInlineButtonEditor) ───────────────────────────
+
+interface RowButtonDialogProps {
+  viewRef: React.MutableRefObject<EditorView | null>
+  pos: number
+  index: number
+  onClose: () => void
+  notify: (t: string) => void
+}
+
+export function RowButtonDialog({ viewRef, pos, index, onClose, notify }: RowButtonDialogProps) {
+  const node = viewRef.current?.state.doc.nodeAt(pos)
+  const existing = (Array.isArray(node?.attrs.buttons) ? [...node!.attrs.buttons] : []) as Partial<RowButton>[]
+  const current = existing[index]
+
+  const [text, setText] = useState(current?.text ?? '')
+  const [style, setStyle] = useState<ButtonStyle>(current?.style ?? 'default')
+  const [type, setType] = useState<ButtonType>(current?.type ?? 'url')
+  const [params, setParams] = useState<ButtonParams>(current?.params ?? {})
+
+  /** Which payload field the official spec reads for each type. */
+  const paramField: Record<ButtonType, 'url' | 'data' | 'query' | 'text' | null> = {
+    url: 'url',
+    web_app: 'url',
+    login_url: 'url',
+    callback_data: 'data',
+    switch_inline_query: 'query',
+    switch_inline_query_current_chat: 'query',
+    switch_inline_query_chosen_chat: 'query',
+    copy_text: 'text',
+    disabled: null,
+  }
+  const PARAM_LABEL: Record<string, string> = {
+    url: 'URL',
+    data: 'Callback data',
+    query: 'Inline query',
+    text: 'Text to copy',
+  }
+
+  const setParam = (patch: Partial<ButtonParams>) => setParams((p) => ({ ...p, ...patch }))
+
+  const apply = () => {
+    const value = text.trim()
+    if (!value) return
+    const view = viewRef.current
+    if (!view) return
+    const buttons = Array.isArray(node?.attrs.buttons) ? [...(node!.attrs.buttons as Partial<RowButton>[])] : []
+    // link style is callback_data-only — enforce on save
+    const finalStyle: ButtonStyle = style === 'link' && type !== 'callback_data' ? 'default' : style
+    buttons[index] = { text: value, style: finalStyle, type, params }
+    view.dispatch(view.state.tr.setNodeMarkup(pos, undefined, { ...node!.attrs, buttons }))
+    notify(index < existing.length ? 'Button updated' : 'Button added')
+    onClose()
+  }
+
+  const remove = () => {
+    const view = viewRef.current
+    if (!view) return
+    const buttons = Array.isArray(node?.attrs.buttons) ? [...(node!.attrs.buttons as Partial<RowButton>[])] : []
+    buttons.splice(index, 1)
+    if (buttons.length === 0) {
+      // last pill gone → drop the whole row block
+      const n = view.state.doc.nodeAt(pos)
+      if (n) view.dispatch(view.state.tr.delete(pos, pos + n.nodeSize))
+    } else {
+      view.dispatch(view.state.tr.setNodeMarkup(pos, undefined, { ...node!.attrs, buttons }))
+    }
+    notify('Button removed')
+    onClose()
+  }
+
+  const styles: { id: ButtonStyle; label: string; cls: string }[] = [
+    { id: 'default', label: 'Default', cls: 'style-default' },
+    { id: 'primary', label: 'Blue', cls: 'style-primary' },
+    { id: 'danger', label: 'Red', cls: 'style-danger' },
+    { id: 'success', label: 'Green', cls: 'style-success' },
+    ...(type === 'callback_data'
+      ? [{ id: 'link' as ButtonStyle, label: 'Link', cls: 'style-link' }]
+      : []),
+  ]
+  // if the type moved away from callback_data while link was picked, fall back
+  const effectiveStyle = style === 'link' && type !== 'callback_data' ? 'default' : style
+
+  const TYPE_LABELS: Record<ButtonType, string> = {
+    url: 'Open URL',
+    callback_data: 'Callback',
+    web_app: 'Mini App',
+    login_url: 'Login',
+    switch_inline_query: 'Inline query',
+    switch_inline_query_current_chat: 'Inline (current chat)',
+    switch_inline_query_chosen_chat: 'Inline (chosen chat)',
+    copy_text: 'Copy text',
+    disabled: 'Disabled',
+  }
+
+  const field = paramField[type]
+  const showLoginExtras = type === 'login_url'
+  const showChatFilters = type === 'switch_inline_query_chosen_chat'
+
+  return (
+    <SheetDialog
+      title={current ? 'Edit Button' : 'New Button'}
+      onClose={onClose}
+      onDone={apply}
+      doneLabel={current ? 'Save' : 'Add'}
+      doneDisabled={!text.trim()}
+    >
+      <div className="px-2 pb-2">
+        {/* live preview */}
+        {text.trim() && (
+          <div className="mb-2.5 flex min-h-[40px] items-center justify-center py-1">
+            {effectiveStyle === 'link' ? (
+              <span className="re-btn-inline-link pointer-events-none">{text.trim()}</span>
+            ) : (
+              <span className={`re-btn-pill style-${effectiveStyle} pointer-events-none`}>{text.trim()}</span>
+            )}
+          </div>
+        )}
+
+        <div className="ios-form">
+          <div className="form-row">
+            <input
+              className="form-input left"
+              value={text}
+              autoFocus
+              maxLength={32}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && apply()}
+              placeholder="Label"
+              aria-label="Button label"
+            />
+          </div>
+        </div>
+
+        {/* type picker — official tg-button types */}
+        <div className="mt-3 text-[13px] font-semibold uppercase tracking-wide text-ios-secondary">Type</div>
+        <div className="ios-form mt-1.5">
+          <div className="form-row">
+            <span className="form-label">Action</span>
+            <select
+              className="form-input"
+              value={type}
+              onChange={(e) => setType(e.target.value as ButtonType)}
+              aria-label="Button type"
+            >
+              {(Object.keys(TYPE_LABELS) as ButtonType[]).map((t) => (
+                <option key={t} value={t}>
+                  {TYPE_LABELS[t]}
+                </option>
+              ))}
+            </select>
+          </div>
+          {field && (
+            <div className="form-row">
+              <span className="form-label">{PARAM_LABEL[field]}</span>
+              <input
+                className="form-input left"
+                value={(params[field] as string) ?? ''}
+                onChange={(e) => setParam({ [field]: e.target.value })}
+                placeholder={
+                  field === 'url'
+                    ? type === 'web_app'
+                      ? 'https://… (private chats only)'
+                      : 'https://t.me'
+                    : field === 'data'
+                      ? 'payload'
+                      : field === 'query'
+                        ? 'query'
+                        : 'text to copy'
+                }
+                aria-label={PARAM_LABEL[field]}
+                autoCapitalize="off"
+                autoCorrect="off"
+                spellCheck={false}
+              />
+            </div>
+          )}
+          {showLoginExtras && (
+            <>
+              <div className="form-row">
+                <span className="form-label">Forward text</span>
+                <input
+                  className="form-input left"
+                  value={params.forwardText ?? ''}
+                  onChange={(e) => setParam({ forwardText: e.target.value || undefined })}
+                  placeholder="optional"
+                  aria-label="Forward text"
+                />
+              </div>
+              <button type="button" className="sheet-row" onClick={() => setParam({ requestWriteAccess: !params.requestWriteAccess })}>
+                <span className="row-label">Request write access</span>
+                {params.requestWriteAccess && <Check size={19} className="check" />}
+              </button>
+            </>
+          )}
+          {showChatFilters && (
+            <>
+              {(
+                [
+                  ['allowUserChats', 'User chats'],
+                  ['allowBotChats', 'Bot chats'],
+                  ['allowGroupChats', 'Group chats'],
+                  ['allowChannelChats', 'Channel chats'],
+                ] as const
+              ).map(([key, label]) => (
+                <button key={key} type="button" className="sheet-row" onClick={() => setParam({ [key]: !params[key] })}>
+                  <span className="row-label">{label}</span>
+                  {params[key] && <Check size={19} className="check" />}
+                </button>
+              ))}
+            </>
+          )}
+        </div>
+
+        {/* style picker — cycle colors; Link appears for callback_data only */}
+        <div className="mt-3 text-[13px] font-semibold uppercase tracking-wide text-ios-secondary">Color</div>
+        <div className="grid grid-cols-2 gap-1.5 px-1 pb-1 pt-1.5">
+          {styles.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => setStyle(s.id)}
+              className={`re-btn-pill ${s.cls}${effectiveStyle === s.id ? ' re-btn-picked' : ''}`}
+            >
+              {text.trim() || s.label}
+            </button>
+          ))}
+        </div>
+        <p className="form-hint">In the document: tap a pill to cycle its color · right-click / long-press to edit.</p>
+
+        {current && (
+          <div className="ios-form mt-1">
+            <button type="button" className="sheet-row justify-center" onClick={remove}>
+              <span className="text-[16px] font-medium text-ios-red">Delete button</span>
+            </button>
+          </div>
+        )}
+      </div>
+    </SheetDialog>
+  )
+}
+
+// ── inline-button dialog (small pill atom inside text) ───────────────────
+
+interface InlineButtonDialogProps {
+  viewRef: React.MutableRefObject<EditorView | null>
+  /** doc pos of an existing inline_button, or null to insert at selection */
+  pos: number | null
+  /** pre-fill for the label (the selection text when inserting) */
+  initialText?: string
+  onClose: () => void
+  notify: (t: string) => void
+}
+
+const INLINE_TYPE_LABELS: Record<ButtonType, string> = {
+  url: 'Open URL',
+  callback_data: 'Callback',
+  web_app: 'Mini App',
+  login_url: 'Login',
+  switch_inline_query: 'Inline query',
+  switch_inline_query_current_chat: 'Inline (current chat)',
+  switch_inline_query_chosen_chat: 'Inline (chosen chat)',
+  copy_text: 'Copy text',
+  disabled: 'Disabled',
+}
+
+export function InlineButtonDialog({ viewRef, pos, initialText = '', onClose, notify }: InlineButtonDialogProps) {
+  const node = pos !== null ? viewRef.current?.state.doc.nodeAt(pos) : null
+  const a = node?.attrs
+
+  const [text, setText] = useState(a?.text ?? initialText)
+  const [style, setStyle] = useState<ButtonStyle>(a?.style ?? 'default')
+  const [type, setType] = useState<ButtonType>(a?.type ?? 'url')
+  const [url, setUrl] = useState(a?.url ?? '')
+  const [data, setData] = useState(a?.data ?? '')
+  const [query, setQuery] = useState(a?.query ?? '')
+  const [copyText, setCopyText] = useState(a?.copyText ?? '')
+
+  const { closing, close } = useAnimatedClose(onClose)
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close()
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [close])
+
+  const payloadFor = () => ({ url, data, query, copyText })
+
+  const apply = () => {
+    const value = text.trim()
+    if (!value) return
+    const view = viewRef.current
+    if (!view) return
+    const finalStyle: ButtonStyle = style === 'link' && type !== 'callback_data' ? 'default' : style
+    const attrs = { text: value, style: finalStyle, type, ...payloadFor() }
+
+    if (pos !== null && view.state.doc.nodeAt(pos)?.type.name === 'inline_button') {
+      view.dispatch(view.state.tr.setNodeMarkup(pos, undefined, attrs))
+      view.focus()
+      notify('Inline button updated')
+      close()
+      return
+    }
+    // insert at selection, replacing it (like bold replaces nothing but sits
+    // where the caret is)
+    view.dispatch(view.state.tr.replaceSelectionWith(view.state.schema.nodes.inline_button.create(attrs)))
+    view.focus()
+    notify('Inline button inserted')
+    close()
+  }
+
+  const remove = () => {
+    const view = viewRef.current
+    if (!view || pos === null) return
+    const n = view.state.doc.nodeAt(pos)
+    if (n) view.dispatch(view.state.tr.delete(pos, pos + n.nodeSize))
+    notify('Inline button removed')
+    close()
+  }
+
+  const effectiveStyle = style === 'link' && type !== 'callback_data' ? 'default' : style
+  const field: Record<ButtonType, 'url' | 'data' | 'query' | 'copyText' | null> = {
+    url: 'url', web_app: 'url', login_url: 'url',
+    callback_data: 'data',
+    switch_inline_query: 'query', switch_inline_query_current_chat: 'query', switch_inline_query_chosen_chat: 'query',
+    copy_text: 'copyText',
+    disabled: null,
+  }
+  const PARAM_LABELS: Record<string, string> = {
+    url: 'URL', data: 'Callback data', query: 'Inline query', copyText: 'Text to copy',
+  }
+  const activeField = field[type]
+
+  return (
+    <SheetDialog
+      title={pos !== null ? 'Edit Inline Button' : 'Insert Inline Button'}
+      onClose={onClose}
+      onDone={apply}
+      doneLabel={pos !== null ? 'Save' : 'Insert'}
+      doneDisabled={!text.trim()}
+    >
+      <div className="px-2 pb-2">
+        {/* live preview — smaller inline pill */}
+        <div className="mb-2.5 flex min-h-[36px] items-center gap-2 py-1">
+          <span className="text-[13px] text-ios-secondary">In text:</span>
+          {effectiveStyle === 'link' ? (
+            <span className="re-inline-btn link pointer-events-none">{text.trim() || 'Preview'}</span>
+          ) : (
+            <span className={`re-inline-btn style-${effectiveStyle} pointer-events-none`}>{text.trim() || 'Preview'}</span>
+          )}
+        </div>
+
+        <div className="ios-form">
+          <div className="form-row">
+            <input
+              className="form-input left"
+              value={text}
+              autoFocus
+              maxLength={24}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && apply()}
+              placeholder="Label"
+              aria-label="Inline button label"
+            />
+          </div>
+          <div className="form-row">
+            <span className="form-label">Action</span>
+            <select className="form-input" value={type} onChange={(e) => setType(e.target.value as ButtonType)} aria-label="Inline button type">
+              {(Object.keys(INLINE_TYPE_LABELS) as ButtonType[]).map((t) => (
+                <option key={t} value={t}>{INLINE_TYPE_LABELS[t]}</option>
+              ))}
+            </select>
+          </div>
+          {activeField && (
+            <div className="form-row">
+              <span className="form-label">{PARAM_LABELS[activeField]}</span>
+              <input
+                className="form-input left"
+                value={{ url, data, query, copyText }[activeField]}
+                onChange={(e) => {
+                  const v = e.target.value
+                  if (activeField === 'url') setUrl(v)
+                  else if (activeField === 'data') setData(v)
+                  else if (activeField === 'query') setQuery(v)
+                  else setCopyText(v)
+                }}
+                placeholder={activeField === 'url' ? 'https://t.me' : activeField === 'data' ? 'payload' : activeField === 'query' ? 'query' : 'text to copy'}
+                aria-label={PARAM_LABELS[activeField]}
+                autoCapitalize="off"
+                autoCorrect="off"
+                spellCheck={false}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* color — link appears only for callback_data */}
+        <div className="mt-3 text-[13px] font-semibold uppercase tracking-wide text-ios-secondary">Color</div>
+        <div className="grid grid-cols-2 gap-1.5 px-1 pb-1 pt-1.5">
+          {(
+            [
+              ['default', 'Default'],
+              ['primary', 'Blue'],
+              ['danger', 'Red'],
+              ['success', 'Green'],
+              ...(type === 'callback_data' ? [['link', 'Link'] as const] : []),
+            ] as [ButtonStyle, string][]
+          ).map(([id, label]) => (
+            <button key={id} type="button" onClick={() => setStyle(id)} className={`re-btn-pill style-${id}${effectiveStyle === id ? ' re-btn-picked' : ''}`}>
+              {text.trim() || label}
+            </button>
+          ))}
+        </div>
+
+        {pos !== null && (
+          <div className="ios-form mt-1">
+            <button type="button" className="sheet-row justify-center" onClick={remove}>
+              <span className="text-[16px] font-medium text-ios-red">Delete button</span>
+            </button>
+          </div>
+        )}
+      </div>
+    </SheetDialog>
+  )
+}
+
+// ── caption dialog ──────────────────────────────────────────────────────
+
+interface CaptionDialogProps {
+  run: (cmd: Command) => void
+  onClose: () => void
+  notify: (t: string) => void
+}
+
+export function CaptionDialog({ run, onClose, notify }: CaptionDialogProps) {
+  const [text, setText] = useState('')
+  return (
+    <SheetDialog
+      title="Table Caption"
+      onClose={onClose}
+      onDone={() => {
+        run(setTableCaption(text))
+        notify(text.trim() ? 'Caption set' : 'Caption removed')
+        onClose()
+      }}
+      doneLabel="Save"
+    >
+      <div className="px-2 pb-2">
+        <div className="ios-form">
+          <div className="form-row">
+            <input
+              className="form-input left"
+              value={text}
+              autoFocus
+              onChange={(e) => setText(e.target.value)}
+              placeholder="Leave empty to remove"
+              aria-label="Table caption"
+            />
+          </div>
+        </div>
+      </div>
+    </SheetDialog>
+  )
+}

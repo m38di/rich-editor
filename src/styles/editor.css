@@ -1,0 +1,1373 @@
+/* ══════════════════════════════════════════════════════════════════════
+   Document content — the article surface inside the paper card.
+   Every selector below is part of the editor's DOM contract
+   (schema.ts / nodeviews.ts / serializer.ts) — names must not change.
+   ══════════════════════════════════════════════════════════════════════ */
+
+.ProseMirror {
+  outline: none;
+}
+
+.rich-editor {
+  min-height: 58vh;
+  padding: 28px 20px 56px;
+  font-size: 16.5px;
+  line-height: 1.68;
+  letter-spacing: -0.1px;
+  color: var(--text);
+  caret-color: var(--accent);
+}
+@media (min-width: 768px) {
+  .rich-editor {
+    padding: 42px 52px 80px;
+    font-size: 17px;
+  }
+}
+
+.ProseMirror-selectednode {
+  outline: 2px solid rgb(var(--c-accent) / 0.6);
+  outline-offset: 3px;
+  border-radius: var(--r-sm);
+}
+li.ProseMirror-selectednode {
+  outline: none;
+}
+
+/* ── headings ────────────────────────────────────────────────────────── */
+
+.rich-editor h1,
+.rich-editor h2,
+.rich-editor h3,
+.rich-editor h4,
+.rich-editor h5,
+.rich-editor h6 {
+  font-family: 'heading', 'Inter var', Inter, system-ui, sans-serif;
+  line-height: 1.2;
+  letter-spacing: -0.6px;
+  margin: 1.15em 0 0.35em;
+  color: var(--text);
+  text-wrap: balance;
+}
+.rich-editor h1 {
+  font-size: 2em;
+  letter-spacing: -0.9px;
+}
+.rich-editor h2 {
+  font-size: 1.55em;
+}
+.rich-editor h3 {
+  font-size: 1.3em;
+}
+.rich-editor h4 {
+  font-size: 1.14em;
+}
+.rich-editor h5 {
+  font-size: 1.02em;
+}
+.rich-editor h6 {
+  font-size: 0.82em;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.rich-editor h1:first-child {
+  margin-top: 0;
+}
+
+.rich-editor p {
+  margin: 0.6em 0;
+}
+
+.rich-editor a {
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px solid rgb(var(--c-accent) / 0.32);
+  transition: border-color var(--dur-fast) ease;
+}
+.rich-editor a:hover {
+  border-bottom-color: var(--accent);
+}
+
+/* ── quote + pull quote ──────────────────────────────────────────────── */
+
+.re-quote {
+  margin: 1em 0;
+  padding: 12px 16px;
+  border-left: 3px solid var(--accent);
+  border-radius: 4px var(--r-md) var(--r-md) 4px;
+  background: var(--accent-tint);
+}
+.re-quote .re-quote-body p {
+  margin: 0.25em 0;
+}
+.re-quote-author {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  border: none;
+  background: transparent;
+  outline: none;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: -0.1px;
+}
+.re-quote-author::placeholder {
+  color: rgb(var(--c-accent) / 0.5);
+  font-weight: 520;
+}
+
+/* Same structure as the quote — a wrapper around whole blocks — only
+   centred and italic. */
+.re-pullquote {
+  position: relative;
+  max-width: 88%;
+  margin: 1.6em auto;
+  padding: 18px 28px;
+  text-align: center;
+  font-size: 1.15em;
+  font-style: italic;
+  line-height: 1.55;
+  color: var(--text);
+  border-top: 1px solid var(--sep);
+  border-bottom: 1px solid var(--sep);
+}
+.re-pullquote-body > * {
+  margin: 0.4em 0;
+}
+.re-pullquote-body > *:first-child {
+  margin-top: 0;
+}
+.re-pullquote-body > *:last-child {
+  margin-bottom: 0;
+}
+.re-pullquote .re-pullquote-body > *:first-child::before {
+  content: '“';
+  margin-right: 4px;
+  color: rgb(var(--c-accent) / 0.6);
+  font-style: normal;
+}
+.re-pullquote .re-quote-author {
+  text-align: center;
+  font-style: normal;
+}
+
+/* ── code, divider, footer ───────────────────────────────────────────── */
+
+.rich-editor pre {
+  margin: 1em 0;
+  padding: 15px 17px;
+  border: 1px solid var(--sep);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  overflow-x: auto;
+  font-family: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13.5px;
+  line-height: 1.6;
+  letter-spacing: 0;
+}
+
+.rich-editor hr {
+  position: relative;
+  height: 28px;
+  margin: 0.9em 0;
+  border: none;
+}
+.rich-editor hr::after {
+  content: '';
+  position: absolute;
+  left: 30%;
+  right: 30%;
+  top: 13px;
+  border-top: 2px dotted var(--sep-strong);
+}
+
+.rich-editor footer {
+  margin-top: 1.8em;
+  padding-top: 14px;
+  border-top: 1px solid var(--sep);
+  color: var(--muted);
+  font-size: 13.5px;
+}
+
+/* ── lists ───────────────────────────────────────────────────────────── */
+
+.rich-editor ul,
+.rich-editor ol {
+  margin: 0.55em 0;
+  padding-left: 28px;
+}
+.rich-editor ul {
+  list-style-type: disc;
+}
+.rich-editor ul ul {
+  list-style-type: circle;
+}
+.rich-editor ul ul ul {
+  list-style-type: square;
+}
+.rich-editor ul ul ul ul {
+  list-style-type: disc;
+}
+.rich-editor ul ul ul ul ul {
+  list-style-type: circle;
+}
+.rich-editor ul ul ul ul ul ul {
+  list-style-type: square;
+}
+.rich-editor ul[data-marker='disc'] {
+  list-style-type: disc;
+}
+.rich-editor ul[data-marker='circle'] {
+  list-style-type: circle;
+}
+.rich-editor ul[data-marker='square'] {
+  list-style-type: square;
+}
+
+.rich-editor ol {
+  list-style-type: decimal;
+}
+.rich-editor ol[data-list-type='1'] {
+  list-style-type: decimal;
+}
+.rich-editor ol[data-list-type='A'] {
+  list-style-type: upper-alpha;
+}
+.rich-editor ol[data-list-type='a'] {
+  list-style-type: lower-alpha;
+}
+.rich-editor ol[data-list-type='I'] {
+  list-style-type: upper-roman;
+}
+.rich-editor ol[data-list-type='i'] {
+  list-style-type: lower-roman;
+}
+
+.rich-editor li {
+  display: list-item;
+  margin: 0.24em 0;
+}
+.rich-editor ul li::marker {
+  color: var(--accent);
+}
+.rich-editor ol li::marker {
+  color: var(--muted);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── checklist ───────────────────────────────────────────────────────── */
+
+/* A checklist is its own list type, not a bulleted list with a checkbox:
+   the <ul> loses its marker entirely and each row is a flex line whose
+   checkbox sits in the gutter, so wrapped text stays aligned with the
+   first line instead of sliding under the box. The selectors are scoped
+   past `.rich-editor li` so they win on specificity. */
+.rich-editor ul.re-task-list,
+.rich-editor ul.task-list {
+  list-style: none;
+  padding-left: 2px;
+  margin: 0.55em 0;
+}
+.rich-editor ul.re-task-list ul.re-task-list {
+  padding-left: 26px;
+}
+
+.rich-editor li.re-task {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0.2em 0;
+  margin-left: 0;
+  padding: 0;
+  list-style: none;
+}
+.rich-editor li.re-task::marker {
+  content: '';
+}
+
+.rich-editor li.re-task > .re-checkbox {
+  flex: 0 0 auto;
+  width: 19px;
+  height: 19px;
+  margin-top: 4px;
+  padding: 0;
+  border: 1.5px solid var(--sep-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  color: #fff;
+  font-size: 11px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) ease, border-color var(--dur-fast) ease,
+    transform var(--dur-fast) var(--spring);
+}
+.re-checkbox:hover {
+  border-color: var(--accent);
+}
+.re-checkbox:active {
+  transform: scale(0.88);
+}
+.re-task.checked > .re-checkbox {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+.re-task.checked > .re-task-body {
+  color: var(--faint);
+}
+
+.rich-editor li.re-task > .re-task-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  transition: color var(--dur-fast) ease;
+}
+.re-task-body > p {
+  margin: 0.1em 0;
+}
+.re-task-body > p + p {
+  margin-top: 0.4em;
+}
+/* nested blocks inside a checklist row keep their own rhythm */
+.re-task-body > ul,
+.re-task-body > ol {
+  margin: 0.3em 0;
+}
+
+/* ── details / toggle ────────────────────────────────────────────────── */
+
+.re-details {
+  position: relative;
+  margin: 1em 0;
+  padding: 3px 5px;
+  border: 1px solid var(--sep);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  overflow: hidden;
+  transition: background-color var(--dur-fast) ease;
+}
+
+/* RichDetailsCell: a 53px-wide full-height arrow strip on the left —
+   generous tap target, no pill background. */
+.re-details-arrow {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 2;
+  width: 53px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-md) 0 0 var(--r-md);
+  display: grid;
+  place-items: center;
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  transition: background-color var(--dur-fast) ease, transform var(--dur) var(--spring);
+}
+.re-details-arrow:hover {
+  background: var(--accent-tint);
+}
+.re-details-arrow::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform var(--dur-slow) var(--spring);
+}
+.re-details.collapsed .re-details-arrow::before {
+  transform: rotate(-45deg);
+}
+.re-details:not(.collapsed) .re-details-arrow::before {
+  transform: rotate(45deg);
+}
+.re-details-arrow:hover {
+  background: var(--accent-tint-strong);
+}
+.re-details-arrow:active {
+  transform: scale(0.88);
+}
+.re-details-arrow::-moz-focus-inner {
+  border: 0;
+}
+
+.re-details-body {
+  padding: 9px 14px 9px 53px;
+  min-height: 42px;
+}
+.re-details-body > summary {
+  display: block;
+  margin: 0.15em 0;
+  min-height: 24px;
+  font-size: 16px;
+  font-weight: 680;
+  line-height: 24px;
+  letter-spacing: -0.25px;
+  list-style: none;
+  outline: none;
+  cursor: text;
+}
+.re-details-body > summary:empty::before {
+  content: 'Title…';
+  color: var(--faint);
+  font-weight: 480;
+  pointer-events: none;
+}
+.re-details-body > summary::-webkit-details-marker,
+.re-details-body > summary::marker {
+  display: none;
+}
+.re-details.collapsed .re-details-body > :not(summary) {
+  display: none;
+}
+.re-details:not(.collapsed) .re-details-body > :not(summary) {
+  display: block;
+}
+.re-details:not(.collapsed) .re-details-body > summary {
+  display: block;
+}
+.re-details-body > p {
+  margin: 0.55em 0;
+}
+.re-details-body > p:first-of-type {
+  margin-top: 0.5em;
+}
+.re-details-body > p:last-child {
+  margin-bottom: 0.3em;
+}
+
+/* ── inline marks ────────────────────────────────────────────────────── */
+
+.rich-editor code {
+  padding: 0.14em 0.4em;
+  border-radius: 6px;
+  background: var(--fill-2);
+  font-family: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.87em;
+  letter-spacing: 0;
+}
+.rich-editor pre code {
+  padding: 0;
+  background: none;
+  font-size: 1em;
+}
+.rich-editor mark {
+  padding: 0 0.16em;
+  border-radius: 4px;
+  background: rgb(250 204 21 / 0.42);
+  color: inherit;
+}
+.dark .rich-editor mark {
+  background: rgb(250 204 21 / 0.3);
+}
+.rich-editor sub,
+.rich-editor sup {
+  font-size: 0.72em;
+}
+
+.rich-editor tg-spoiler {
+  padding: 0 0.14em;
+  border-radius: 5px;
+  color: transparent;
+  background: linear-gradient(100deg, #b9c1cb 30%, #cfd6de 46%, #aab3be 60%, #b9c1cb 78%);
+  background-size: 220px 100%;
+  animation: spoiler-shimmer 1.5s linear infinite;
+  transition: color var(--dur) ease;
+}
+.dark .rich-editor tg-spoiler {
+  background: linear-gradient(100deg, #3a4150 30%, #4a5262 46%, #333a47 60%, #3a4150 78%);
+  background-size: 220px 100%;
+}
+.rich-editor tg-spoiler:hover,
+.rich-editor tg-spoiler::selection {
+  animation: none;
+  background: var(--fill-2);
+  color: inherit;
+}
+
+/* ── media blocks ────────────────────────────────────────────────────── */
+
+.re-media {
+  margin: 1.1em 0;
+}
+.re-media-frame {
+  position: relative;
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  background: var(--surface-2);
+  box-shadow: var(--shadow-sm);
+}
+.re-media-frame img,
+.re-media-frame video {
+  display: block;
+  width: 100%;
+  max-height: 440px;
+  object-fit: cover;
+}
+.re-media-frame audio {
+  display: none; /* replaced by the custom player below */
+}
+
+/* ── custom audio player (Telegram voice-note style) ───────────────────── */
+
+.re-audio-player {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--surface-2);
+}
+.re-audio-play {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  border: none;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--accent-gradient);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: var(--accent-glow);
+  transition: transform var(--dur-fast) var(--spring), filter var(--dur-fast) ease;
+}
+.re-audio-play:hover {
+  filter: brightness(1.07);
+}
+.re-audio-play:active {
+  transform: scale(0.9);
+}
+.re-audio-bar {
+  flex: 1 1 auto;
+  height: 4px;
+  min-width: 40px;
+  border-radius: 999px;
+  background: rgb(var(--c-accent) / 0.18);
+  overflow: hidden;
+  cursor: pointer;
+}
+.re-audio-fill {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transform-origin: left center;
+  transform: scaleX(0);
+  transition: transform 120ms linear;
+}
+.re-audio-title {
+  flex: 0 1 auto;
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13.5px;
+  font-weight: 650;
+  color: var(--text);
+}
+.re-audio-time {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── document card (Telegram file attachment style) ────────────────────── */
+
+.re-doc-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--surface-2);
+  cursor: pointer;
+  transition: background-color var(--dur-fast) ease;
+}
+.re-doc-card:hover {
+  background: var(--fill);
+}
+.re-doc-icon {
+  flex: 0 0 auto;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--accent-tint-strong);
+  color: var(--accent);
+}
+.re-doc-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.re-doc-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14.5px;
+  font-weight: 650;
+  letter-spacing: -0.15px;
+  color: var(--text);
+}
+.re-doc-meta {
+  margin-top: 2px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.re-doc-open {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease,
+    transform var(--dur-fast) var(--spring);
+}
+.re-doc-open:hover {
+  background: var(--accent-tint);
+  color: var(--accent);
+}
+.re-doc-open:active {
+  transform: scale(0.9);
+}
+.re-media-frame.spoilered img,
+.re-media-frame.spoilered video {
+  filter: blur(22px) saturate(1.25);
+  transform: scale(1.06);
+}
+.re-media-frame.spoilered::after {
+  content: '🙈 Spoiler';
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: 650;
+  letter-spacing: -0.1px;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+}
+
+.re-media-tools {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 6px;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease);
+}
+.re-media-frame:hover .re-media-tools,
+.re-media-frame:focus-within .re-media-tools {
+  opacity: 1;
+  transform: none;
+}
+
+.re-tool {
+  padding: 6px 11px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(12, 14, 20, 0.66);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 650;
+  letter-spacing: -0.1px;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) ease, transform var(--dur-fast) var(--spring);
+}
+.re-tool:hover {
+  background: rgba(12, 14, 20, 0.82);
+}
+.re-tool:active {
+  transform: scale(0.93);
+}
+.re-tool.danger:hover {
+  background: var(--red);
+}
+
+.re-media-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 40px 16px;
+  border: none;
+  background: var(--accent-tint);
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 650;
+  letter-spacing: -0.15px;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) ease;
+}
+.re-media-placeholder:hover {
+  background: var(--accent-tint-strong);
+}
+.re-media-ph-icon {
+  font-size: 28px;
+}
+
+/* The node view owns a plain slot; the fig_caption node inside it renders the
+   real <figcaption class="re-caption">. When the media block has no caption
+   node yet the slot itself shows the placeholder, and a mousedown on it
+   creates the caption before placing the caret. */
+.re-caption-slot {
+  display: block;
+}
+.re-caption-slot:empty::before {
+  content: 'Caption…';
+  display: block;
+  margin-top: 8px;
+  padding: 3px 7px;
+  color: var(--faint);
+  font-size: 13px;
+  letter-spacing: -0.1px;
+  cursor: text;
+}
+
+.re-caption {
+  display: block;
+  margin-top: 8px;
+  padding: 3px 7px;
+  min-height: 1.4em;
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+  letter-spacing: -0.1px;
+  transition: background-color var(--dur-fast) ease;
+}
+.re-caption:hover {
+  background: var(--fill);
+}
+.re-caption:focus,
+.re-caption:focus-within {
+  outline: none;
+  background: var(--fill);
+}
+.re-caption:empty::before {
+  content: attr(data-placeholder);
+  color: var(--faint);
+  pointer-events: none;
+}
+
+/* ── gallery (collage / slideshow) ───────────────────────────────────── */
+
+.re-gallery {
+  position: relative;
+  margin: 10px 0 6px;
+}
+.re-gallery-stage {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--r-lg);
+  background: var(--surface-2);
+  box-shadow: var(--shadow-sm);
+  transition: height 320ms cubic-bezier(0.23, 1, 0.32, 1);
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+/* One moving layer for the slideshow pager — drags/settles only ever write
+   a translate3d here, which the compositor handles without layout. */
+.re-gallery-track {
+  position: absolute;
+  inset: 0;
+  will-change: transform;
+}
+.re-gallery-tile {
+  position: absolute;
+  overflow: hidden;
+  background: var(--surface-3);
+}
+.re-gallery-stage.morphing .re-gallery-tile {
+  transition: left 320ms cubic-bezier(0.23, 1, 0.32, 1),
+    top 320ms cubic-bezier(0.23, 1, 0.32, 1), width 320ms cubic-bezier(0.23, 1, 0.32, 1),
+    height 320ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.re-gallery-media {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.re-gallery-tile img.re-gallery-media {
+  pointer-events: none;
+}
+.re-gallery-tile audio {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: calc(100% - 24px);
+}
+.re-gallery-tile.spoilered .re-gallery-media {
+  filter: blur(18px);
+  transform: scale(1.08);
+}
+
+/* ── custom slide controller (slideshow videos) ──────────────────────────
+   Replaces native <video controls> inside slides so horizontal swipes are
+   never eaten by the media controls. */
+
+.re-slide-ctrl-wrap {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 8px;
+  z-index: 5;
+  pointer-events: none; /* only the pill itself takes pointers */
+  animation: fade-in 240ms ease-out both;
+}
+.re-slide-ctrl {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 5px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.4);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  backdrop-filter: blur(16px) saturate(140%);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.25);
+}
+.re-slide-play,
+.re-slide-mute {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--spring), background-color var(--dur-fast) ease;
+}
+.re-slide-play:hover,
+.re-slide-mute:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+.re-slide-play:active,
+.re-slide-mute:active {
+  transform: scale(0.88);
+}
+.re-slide-bar {
+  flex: 1 1 auto;
+  height: 4px;
+  min-width: 40px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.28);
+  overflow: hidden;
+  cursor: default;
+}
+.re-slide-fill {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: #fff;
+  transform-origin: left center;
+  transform: scaleX(0);
+  transition: transform 120ms linear;
+}
+
+/* touch affordances: bigger hit areas for the gallery circles on phones */
+@media (hover: none) and (pointer: coarse) {
+  .re-gal-add,
+  .re-gal-switch {
+    width: 36px;
+    height: 36px;
+  }
+  .re-gal-switch {
+    right: 48px;
+  }
+  .re-gal-itemmenu {
+    width: 30px;
+    height: 30px;
+  }
+  .re-slide-play,
+  .re-slide-mute {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+/* Telegram createCircleButton(): 32×32 glass circle — 0x66000000 fill,
+   blur, 0x33FFFFFF hairline; pinned dp(6) from edges. */
+.re-gal-circle {
+  position: absolute;
+  z-index: 6;
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.4);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  backdrop-filter: blur(16px) saturate(140%);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.25);
+  transition: transform var(--dur-fast) var(--spring), background-color var(--dur-fast) ease;
+}
+.re-gal-circle:hover {
+  background: rgba(0, 0, 0, 0.56);
+}
+.re-gal-circle:active {
+  transform: scale(0.9);
+}
+.re-gal-add {
+  top: 6px;
+  right: 6px;
+}
+.re-gal-switch {
+  top: 6px;
+  right: 44px; /* add width + its inset */
+}
+.re-gal-itemmenu {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 28px;
+  height: 28px;
+}
+
+/* RichMediaCell slideDotPaint: white dots, r 3→5 near the active page
+   (dp(2)→dp(3)), pitch 13px, drop shadow below. */
+.re-gallery-pagerdots {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 4;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  pointer-events: none;
+}
+.re-gal-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.63);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  transition: width 180ms ease, height 180ms ease, background-color 180ms ease;
+}
+.re-gal-dot.on {
+  width: 10px;
+  height: 10px;
+  background: #fff;
+}
+
+/* ── map ─────────────────────────────────────────────────────────────── */
+
+.re-map {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 200px;
+  border: 1px solid var(--sep);
+  border-radius: var(--r-lg);
+  cursor: pointer;
+  background: radial-gradient(circle at 32% 34%, rgba(56, 189, 248, 0.3), transparent 50%),
+    linear-gradient(140deg, #dceafa, #e7f4ee);
+  transition: filter var(--dur-fast) ease, transform var(--dur-fast) var(--spring);
+}
+.dark .re-map {
+  background: radial-gradient(circle at 32% 34%, rgba(56, 189, 248, 0.22), transparent 50%),
+    linear-gradient(140deg, #1a2434, #16232a);
+}
+.re-map:hover {
+  filter: brightness(1.02);
+}
+.re-map:active {
+  transform: scale(0.995);
+}
+.re-map-pin {
+  font-size: 30px;
+}
+.re-map-label {
+  color: #1c5a99;
+  font-size: 14px;
+  font-weight: 650;
+  letter-spacing: -0.2px;
+  font-variant-numeric: tabular-nums;
+}
+.dark .re-map-label {
+  color: #8ec7ff;
+}
+.re-map-edit {
+  color: var(--accent);
+  font-size: 12.5px;
+  font-weight: 560;
+}
+
+/* ── math, time, anchor chips ────────────────────────────────────────── */
+
+.re-math-block {
+  margin: 1.1em 0;
+  padding: 18px;
+  text-align: center;
+  border: 1px dashed rgb(var(--c-accent) / 0.45);
+  border-radius: var(--r-md);
+  background: var(--accent-tint);
+  cursor: pointer;
+  overflow-x: auto;
+  transition: background-color var(--dur-fast) ease, border-color var(--dur-fast) ease;
+}
+.re-math-block:hover {
+  background: var(--accent-tint-strong);
+}
+.re-math-block.selected {
+  border-style: solid;
+  border-color: var(--accent);
+  background: var(--accent-tint-strong);
+}
+.re-math-empty {
+  color: var(--faint);
+  font-size: 13.5px;
+}
+.re-math-inline {
+  display: inline-block;
+  padding: 0 6px;
+  border-radius: 6px;
+  background: var(--accent-tint);
+  cursor: pointer;
+}
+.re-time-chip {
+  display: inline-block;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--accent-tint);
+  color: var(--accent);
+  font-size: 0.9em;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.re-anchor-chip {
+  display: inline-block;
+  padding: 0 8px;
+  border: 1px dashed var(--sep-strong);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.84em;
+  font-weight: 650;
+}
+
+/* KaTeX inherits the document ink in both themes */
+.rich-editor .katex {
+  color: var(--text);
+}
+
+/* ── button row (pageBlockButtonRow) ─────────────────────────────────────
+   Telegram RichMessageLayout.RichButton: fully-rounded pills, bold labels,
+   INLINE_PADDING_HORIZONTAL = 7px; tap cycles style. */
+
+/* The row IS the horizontal scroller: pills never wrap or shrink — wide
+   rows slide under sticky edge fades. */
+.re-button-row {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none; /* fades communicate scrollability */
+  padding-bottom: 2px;
+}
+.re-button-row::-webkit-scrollbar {
+  display: none;
+}
+.re-button-row.selected {
+  outline: 2px solid rgb(var(--c-accent) / 0.6);
+  outline-offset: 3px;
+  border-radius: var(--r-md);
+}
+/* edge fades — sticky inside the scroller so they hug the visible edges */
+.re-btn-fade {
+  position: sticky;
+  top: 0;
+  height: 34px;
+  width: 24px;
+  flex: 0 0 auto;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 200ms ease;
+  z-index: 2;
+}
+.re-btn-fade.left {
+  left: 0;
+  background: linear-gradient(90deg, var(--surface) 30%, transparent);
+  margin-right: -8px; /* pull the first pill under the fade */
+}
+.re-btn-fade.right {
+  right: 0;
+  background: linear-gradient(-90deg, var(--surface) 30%, transparent);
+  margin-left: -8px;
+}
+.re-button-row.can-left .re-btn-fade.left {
+  opacity: 1;
+}
+.re-button-row.can-right .re-btn-fade.right {
+  opacity: 1;
+}
+
+.re-button-row-pills {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* style="link" — callback_data-only: NOT a pill. Exactly the document's
+   inline-link look (RichButtonStyle.link → accent text, link underline). */
+.re-btn-inline-link {
+  background: none;
+  border: none;
+  padding: 0 1px;
+  color: var(--accent);
+  font-size: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: rgb(var(--c-accent) / 0.32);
+  text-underline-offset: .18em;
+  transition: text-decoration-color var(--dur-fast) ease;
+}
+.re-btn-inline-link:hover {
+  text-decoration-color: var(--accent);
+}
+.re-btn-inline-link:active {
+  opacity: 0.7;
+}
+
+/* ── inline button ATOM (flows inside text; smaller than row pills) ────── */
+
+.re-inline-btn {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 12px;
+  font-size: 0.82em;
+  font-weight: 700;
+  letter-spacing: -0.1px;
+  white-space: nowrap;
+  vertical-align: baseline;
+  cursor: pointer;
+  user-select: none;
+  margin: 0 2px;
+  transition: transform var(--dur-fast) var(--spring), filter var(--dur-fast) ease;
+}
+.re-inline-btn:active {
+  transform: scale(0.92);
+}
+.re-inline-btn.style-default { background: var(--fill); color: var(--text); }
+.re-inline-btn.style-primary { background: #229af0; color: #f8fcff; }
+.dark .re-inline-btn.style-primary { background: rgb(var(--c-accent)); color: var(--accent-ink); }
+.re-inline-btn.style-danger { background: rgba(204, 80, 73, 0.14); color: #cc5049; }
+.dark .re-inline-btn.style-danger { background: rgba(255, 99, 105, 0.16); color: #ff6369; }
+.re-inline-btn.style-success { background: rgba(64, 169, 32, 0.13); color: #40a920; }
+.dark .re-inline-btn.style-success { background: rgba(62, 207, 127, 0.16); color: #3ecf7f; }
+/* the callback_data-only link style — plain inline-link typography */
+.re-inline-btn.link {
+  height: auto;
+  padding: 0 1px;
+  border-radius: 0;
+  background: none;
+  color: var(--accent);
+  font-weight: inherit;
+  font-size: inherit;
+  text-decoration: underline;
+  text-decoration-color: rgb(var(--c-accent) / 0.32);
+  text-underline-offset: .18em;
+}
+.re-inline-btn.link:hover { text-decoration-color: var(--accent); }
+
+.re-btn-pill {
+  flex: 0 0 auto; /* never shrink — the row scrolls instead */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 34px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 17px; /* height/2 — full pill */
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.1px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--spring), filter var(--dur-fast) ease,
+    background-color var(--dur-fast) ease;
+}
+.re-btn-pill:active {
+  transform: scale(0.91); /* PRESS_SCALE_INLINE ≈ 0.09 */
+}
+.re-btn-pill.empty {
+  border: 1.5px dashed var(--sep-strong);
+  color: var(--faint);
+  background: transparent;
+}
+.re-btn-pill.empty:hover {
+  color: var(--accent);
+  border-color: rgb(var(--c-accent) / 0.5);
+}
+
+/* style-default: transparent — text @ 8% bg (Theme.multAlpha(textColor, .08));
+   dark theme → white-ish tint, light → black-ish */
+.re-btn-pill.style-default {
+  background: var(--fill);
+  color: var(--text);
+}
+/* style-primary: #229AF0 solid, near-white label (TELEGRAM_COLOR) */
+.re-btn-pill.style-primary {
+  background: #229af0;
+  color: #f8fcff;
+}
+.dark .re-btn-pill.style-primary {
+  background: rgb(var(--c-accent));
+  color: var(--accent-ink);
+}
+/* style-danger: red text on its tint (key_chat_msgIvButtonDanger*) */
+.re-btn-pill.style-danger {
+  background: rgba(204, 80, 73, 0.14);
+  color: #cc5049;
+}
+.dark .re-btn-pill.style-danger {
+  background: rgba(255, 99, 105, 0.16);
+  color: #ff6369;
+}
+/* style-success: green text on its tint (key_chat_msgIvButtonSuccess*) */
+.re-btn-pill.style-success {
+  background: rgba(64, 169, 32, 0.13);
+  color: #40a920;
+}
+.dark .re-btn-pill.style-success {
+  background: rgba(62, 207, 127, 0.16);
+  color: #3ecf7f;
+}
+
+/* picked state in the style picker dialog */
+.re-btn-pill.re-btn-picked {
+  box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent);
+}
+
+/* round "+" chip after the pills (RichButtonRowCell add affordance) */
+.re-btn-add {
+  width: 34px;
+  height: 34px;
+  border: 1.5px dashed var(--sep-strong);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--spring), color var(--dur-fast) ease,
+    border-color var(--dur-fast) ease;
+}
+.re-btn-add:hover {
+  color: var(--accent);
+  border-color: rgb(var(--c-accent) / 0.5);
+}
+.re-btn-add:active {
+  transform: scale(0.9);
+}
+.re-btn-add svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ── checklist — Telegram marker column look ───────────────────────────
+   The checkbox sits in the same 28px gutter as bullets/numbers, is a
+   rounded square that fills with accent and draws a white tick when
+   checked, and checked labels dim smoothly. */
+
+.rich-editor li.re-task > .re-checkbox {
+  width: 22px;
+  height: 22px;
+  margin-top: 3px;
+  border-radius: 7px;
+  border-width: 2px;
+  font-size: 13px;
+}
+.re-task.checked > .re-task-body {
+  transition: color var(--dur) ease;
+}
+
+/* ── mobile comfort ────────────────────────────────────────────────────── */
+
+/* Prevent iOS Safari from zoom-jumping when a caption/author input is
+   focused: inputs must be ≥16px on coarse pointers. */
+@media (hover: none) and (pointer: coarse) {
+  .rich-editor {
+    font-size: 16.5px;
+    padding: 20px 14px calc(56px + env(safe-area-inset-bottom));
+    -webkit-tap-highlight-color: transparent;
+  }
+  .re-quote-author {
+    font-size: 16px !important;
+  }
+  /* media hover tools are unreachable without hover — show them inline */
+  .re-media-tools {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Heavy visual blocks settle in softly when they appear. Deliberately NOT
+   `.rich-editor > *`: plain paragraphs are created on every Enter, and a
+   300ms fade per keystroke reads as typing lag. `backwards` (not `both`)
+   leaves no lingering transform afterwards. */
+@keyframes block-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+.rich-editor > figure,
+.rich-editor > div.re-gallery,
+.rich-editor > .re-table-host,
+.rich-editor > .re-details,
+.rich-editor > blockquote,
+.rich-editor > aside,
+.rich-editor > pre {
+  animation: block-in 340ms var(--ease) backwards;
+}

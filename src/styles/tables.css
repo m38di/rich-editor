@@ -1,0 +1,357 @@
+/* ══════════════════════════════════════════════════════════════════════
+   Tables — .re-table* selectors are produced by nodeviews.ts /
+   tableCommands.ts, so the names are part of the contract.
+   ══════════════════════════════════════════════════════════════════════ */
+
+.re-table {
+  width: 100%;
+  margin: 14px 0;
+  border-collapse: separate;
+  border-spacing: 0;
+  /* RichTableCellGrid paints backgrounds/borders clipped to dp(10).
+     `overflow:hidden` is unreliable on <table> in several engines, so the
+     corner cells carry explicit radii below — this also keeps the ring and
+     tint from spilling past the silhouette. */
+  border-radius: 10px;
+  background: var(--surface);
+  font-size: 14px;
+  line-height: 1.5;
+  table-layout: fixed;
+}
+
+/* corner rounding follows the table's dp(10) silhouette in every variant */
+.re-table tr:first-child th:first-child,
+.re-table tr:first-child td:first-child {
+  border-top-left-radius: 10px;
+}
+.re-table tr:first-child th:last-child,
+.re-table tr:first-child td:last-child {
+  border-top-right-radius: 10px;
+}
+.re-table tr:last-child td:first-child,
+.re-table tr:last-child th:first-child {
+  border-bottom-left-radius: 10px;
+}
+.re-table tr:last-child td:last-child,
+.re-table tr:last-child th:last-child {
+  border-bottom-right-radius: 10px;
+}
+/* single-cell tables / one-row headers keep all four corners round */
+.re-table tr:first-child td:only-child,
+.re-table tr:first-child th:only-child {
+  border-radius: 10px;
+}
+
+.re-table td,
+.re-table th {
+  position: relative;
+  min-width: 0;
+  padding: 11px 14px;
+  border: 0;
+  text-align: left;
+  vertical-align: top;
+  background: var(--surface);
+  transition: background-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
+}
+
+.re-table th {
+  background: var(--surface-2);
+  font-weight: 680;
+  letter-spacing: -0.1px;
+}
+
+/* bordered */
+.re-table-bordered {
+  border: 1px solid var(--sep-strong);
+}
+.re-table-bordered td,
+.re-table-bordered th {
+  border-right: 1px solid var(--sep-strong);
+  border-bottom: 1px solid var(--sep-strong);
+}
+.re-table-bordered td:last-child,
+.re-table-bordered th:last-child {
+  border-right: 0;
+}
+.re-table-bordered tr:last-child td,
+.re-table-bordered tr:last-child th {
+  border-bottom: 0;
+}
+
+/* borderless */
+.re-table-borderless {
+  background: transparent;
+}
+.re-table-borderless td,
+.re-table-borderless th {
+  background: transparent;
+  border: 0;
+}
+
+/* striped */
+.re-table-striped tr:nth-child(even):not(:first-child) td,
+.re-table-striped tr:nth-child(even):not(:first-child) th {
+  background: var(--surface-2);
+}
+.re-table-striped tr:first-child th {
+  background: var(--surface-3);
+}
+.re-table-borderless.re-table-striped tr:nth-child(even) td {
+  background: var(--fill);
+}
+
+/* ── cell selection — RichTableCellGrid chrome ─────────────────────────── */
+
+.ProseMirror.re-table-selecting,
+.ProseMirror.re-table-selecting * {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -webkit-touch-callout: none !important;
+  -webkit-user-drag: none !important;
+}
+
+/* Selected cells: soft accent fill (selectedFillBaseAlpha ≈ 80/255) with a
+   hairline inner edge so adjacent cells read as one merged block. The
+   strong 2px group ring (selectedStrokePaint, key_featuredStickers_addButton)
+   is painted by TableView's overlay — not per cell — so multi-selections
+   show ONE continuous outline instead of a lattice. */
+.re-table-cell-active {
+  background: rgb(var(--c-accent) / 0.12) !important;
+  box-shadow: inset 0 0 0 0.75px rgb(var(--c-accent) / 0.4);
+}
+
+/* caret focus stays subtle while a selection is active (class lives on the
+   .re-table-host wrapper — see TableView.sync) */
+.re-table-host.has-cell-selection td:focus-within,
+.re-table-host.has-cell-selection th:focus-within {
+  background: rgb(var(--c-accent) / 0.12);
+  box-shadow: none;
+}
+
+/* alignment attributes from the schema */
+.re-table td[align='center'],
+.re-table th[align='center'] {
+  text-align: center;
+}
+.re-table td[align='right'],
+.re-table th[align='right'] {
+  text-align: right;
+}
+.re-table td[valign='middle'],
+.re-table th[valign='middle'] {
+  vertical-align: middle;
+}
+.re-table td[valign='bottom'],
+.re-table th[valign='bottom'] {
+  vertical-align: bottom;
+}
+
+.re-table caption {
+  caption-side: top;
+  padding: 2px 8px 10px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13.5px;
+  font-weight: 650;
+  caret-color: var(--accent);
+}
+.re-table caption:empty::before {
+  content: 'Caption…';
+  color: var(--faint);
+  font-weight: 480;
+  pointer-events: none;
+}
+
+.re-table td > p,
+.re-table th > p {
+  margin: 0;
+}
+.re-table td > p + p,
+.re-table th > p + p {
+  margin-top: 6px;
+}
+
+/* ── host with row/column grab handles ───────────────────────────────── */
+
+.re-table-host {
+  position: relative;
+  margin: 14px 0;
+  padding: 2px 6px 28px 28px;
+}
+/* symmetric gutters: bottom padding matches the left (28/28) so the column
+   dots sit at the SAME distance from the table as the row dots */
+.re-table-scroll {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--fill-3) transparent;
+}
+.re-table-scroll::-webkit-scrollbar {
+  height: 8px;
+}
+.re-table-scroll::-webkit-scrollbar-thumb {
+  background: var(--fill-3);
+  border-radius: 999px;
+}
+/* Wide tables scroll instead of squeezing text. min-width ON THE TABLE —
+   with table-layout:fixed, cell min-widths alone don't grow the tracks. */
+.re-table-scroll > .re-table {
+  width: max-content;
+  min-width: 100%;
+  margin: 0;
+  box-shadow: var(--shadow-xs);
+}
+.re-table-scroll td,
+.re-table-scroll th {
+  min-width: 110px;
+}
+/* edge fades — siblings of the scroller, over its visible edges */
+.re-tfade {
+  position: absolute;
+  top: 2px;
+  bottom: 28px;
+  width: 28px;
+  z-index: 4;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+.re-tfade.left {
+  left: 28px;
+  background: linear-gradient(90deg, var(--surface) 30%, transparent);
+}
+.re-tfade.right {
+  right: 6px;
+  background: linear-gradient(-90deg, var(--surface) 30%, transparent);
+}
+.re-table-host.can-left .re-tfade.left {
+  opacity: 1;
+}
+.re-table-host.can-right .re-tfade.right {
+  opacity: 1;
+}
+
+.re-table-handles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 220ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.re-table-handles.on {
+  opacity: 1;
+}
+
+/* ── merged selection ring (selectedStrokePaint) ───────────────────────── */
+
+.re-th-selring {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 220ms cubic-bezier(0.23, 1, 0.32, 1);
+  pointer-events: none;
+}
+.re-th-selring-seg,
+.re-th-selring-fill {
+  position: absolute;
+}
+.re-th-selring-seg {
+  box-sizing: border-box;
+  border: 2px solid rgb(var(--c-accent) / 0.9); /* dp(2), full alpha */
+}
+
+/* ── grab dots — RichTableCellGrid: 3dp dots at dp(8) pitch ──────────────
+   Both handles are symmetric 26×26 hit zones centered in their gutters
+   (row: left gutter; column: bottom gutter), so they scale identically.
+   The active (.sel) state draws the accent bulge BEHIND the dots — on a
+   light theme white dots alone would vanish against the page. */
+
+.re-th-dots {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 13px;
+  pointer-events: auto;
+  cursor: pointer;
+  transition: background-color 220ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.re-th-dots::before,
+.re-th-dots::after {
+  content: none;
+}
+/* dot triplets: 3.5px dots, 8px pitch (gap = 8 - 3.5) */
+.re-th-dots .dot-triplet {
+  display: flex;
+  gap: 4.5px;
+  transition: transform var(--dur-fast) var(--spring);
+}
+.re-th-dots.row .dot-triplet {
+  flex-direction: column;
+}
+.re-th-dots span {
+  width: 3.5px;
+  height: 3.5px;
+  border-radius: 50%;
+  background: var(--muted); /* key_windowBackgroundWhiteGrayText7 */
+  transition: background-color var(--dur-fast) ease;
+}
+.re-th-dots:hover {
+  background: var(--fill);
+}
+.re-th-dots:hover span {
+  background: var(--text);
+}
+/* Both handles live in 28px gutters (host padding-left / padding-bottom).
+   The overlay's coordinate origin is the host's OUTER edge, so centering
+   a 26px handle in the gutter means an offset of (28-26)/2 = 1px — NOT a
+   negative offset, which hung them half outside the card and looked broken. */
+.re-th-dots.row {
+  left: 1px;
+  transform: translateY(-50%);
+}
+/* Column dots mirror the row dots' exact 14px center distance from the
+   table edge (measured live; the host's bottom gutter is padding-bottom
+   plus the scroller's top offset, so the raw value is 11px). */
+.re-th-dots.col {
+  bottom: 11px;
+  transform: translateX(-50%);
+}
+/* active: accent disc behind white dots (the mini-bulge look) */
+.re-th-dots.sel {
+  background: var(--accent);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.25);
+}
+.re-th-dots.sel span {
+  background: #fff;
+}
+.re-th-dots.sel:active .dot-triplet {
+  transform: scale(0.85);
+}
+
+/* ── accent bulge (BULGE_DP=16 protruding past the grid edge) ────────────
+   Driven by a .on class (not inline opacity) so it can never get out of
+   sync with the dots' .sel state. */
+
+.re-th-bulge {
+  position: absolute;
+  border-radius: 10px;
+  background: var(--accent);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 220ms cubic-bezier(0.23, 1, 0.32, 1), transform 220ms cubic-bezier(0.23, 1, 0.32, 1);
+  transform: scale(0.6);
+}
+.re-th-bulge.on {
+  opacity: 1;
+  transform: scale(1);
+}
+.re-th-bulge.row {
+  left: 2px; /* inside the left gutter, under the row dots */
+  width: 22px;
+}
+.re-th-bulge.col {
+  bottom: 2px;
+  height: 22px;
+}
