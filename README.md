@@ -1,159 +1,427 @@
-# Rich Editor — a Telegram iOS–style article editor for the web
+# Telegram Android Rich Editor → React Web
 
-A faithful web reconstruction of the Android **Rich Editor** module
-(`org.telegram.ui.iv`, 41 files / 23,510 lines), rebuilt as a modern React app
-with the **Telegram iOS** look: SF typography, translucent vibrancy bars,
-grabber sheets, spring animations and the blue circular send button.
+A production-grade React reconstruction of Telegram Android's `org.telegram.ui.iv` rich editor, with the visual language of Telegram iOS.
 
-The messaging pipeline is fully replaced by:
+## What it does
 
-```
-Import ↑ (.html)  →  edit  →  Generate → Preview (rendered ⇄ HTML source)
-                  →  Download .html / Copy HTML
-```
+The editor follows the complete workflow:
 
-**Import** closes the loop: the ↑ button in the title bar opens any `.html`
-file back into the editor. Files produced by the Download step round-trip
-fully — headings, marks, lists (incl. checkboxes), quotes, code, tables,
-details, `tg-spoiler`, `tg-emoji`, `tg-time`, `tg-math(-block)`, `tg-map`,
-galleries, figures and buttons all survive. Arbitrary semantic HTML degrades
-to plain blocks. Replacing the document is a single undo step (`Ctrl+Z`
-restores the previous article).
+1. Import an `.html` file
+2. Edit it in a rich ProseMirror editor
+3. Generate the document
+4. Preview the rendered result or HTML source
+5. Download the generated `.html` or copy the HTML
 
-The exported HTML uses **only** the provided tag reference — `tg-spoiler`,
-`tg-emoji`, `tg-time`, `tg-math(-block)`, `tg-map`, `tg-collage`, `tg-slideshow`,
-`aside`/`cite`, `<table bordered striped>`, checkbox `<li>`, `details/summary`,
-figures with captions — clean, semantic, no editor attributes.
+### Import
+
+Use the `↑` button in the title bar to import an `.html` file.
+
+The importer preserves supported semantic structures including:
+
+- Headings and text marks
+- Ordered and unordered lists
+- Checkbox lists
+- Quotes and code blocks
+- Tables
+- `details` / `summary`
+- `tg-spoiler`
+- `tg-emoji`
+- `tg-time`
+- `tg-math` / `tg-math-block`
+- `tg-map`
+- Galleries
+- Figures and captions
+- Buttons
+
+Unsupported arbitrary semantic HTML gracefully degrades to plain blocks.
+
+Replacing the current document is represented as a single undo step.
+
+### Export
+
+Generated HTML intentionally uses only the supported reference tags:
+
+- `tg-spoiler`
+- `tg-emoji`
+- `tg-time`
+- `tg-math` / `tg-math-block`
+- `tg-map`
+- `tg-collage`
+- `tg-slideshow`
+- `aside` / `cite`
+- `<table bordered striped>`
+- Checkbox `<li>` items
+- `details` / `summary`
+- Figures with captions
+
+The editor does not export internal editor attributes.
 
 ## Quick start
 
 ```bash
 npm install
-npm run dev        # http://localhost:5173
-npm run build      # production build → dist/
-npm run preview    # serve the production build locally
-npm run typecheck  # TypeScript compiler check (no emit)
+npm run dev
 ```
 
-> Zero-build alternative: open `rich-editor-demo.html` (sibling artifact)
-> directly in a browser — same workflow, no dependencies.
-
-## The iOS interface
-
-- **Navigation bar** — translucent vibrancy, back chevron, live character
-  counter, undo/redo.
-- **Compose bar** — attach (+), emoji, `Aa` text style, lists, table, math,
-  and the blue circular **↑ Generate** button (the old "send").
-- **Formatting strip** — floats above the compose bar whenever text is
-  selected: B I U S, spoiler, mono, sub/sup, highlight, quote, link, date,
-  inline math, clear. Selection-safe (buttons never steal your selection).
-- **Grabber sheets** — every menu and dialog is an iOS bottom sheet with a
-  grabber, grouped cards, hairline separators and Telegram-style colored
-  circle icons.
-- **Preview sheet** — full-screen with a segmented Preview ⇄ HTML switch,
-  Copy HTML and Download .html.
-- **Motion** — iOS spring curves (`cubic-bezier(0.32, 0.72, 0, 1)`), press
-  scale feedback, animated spoiler shimmer, content scrolling under the
-  blurred bars.
-
-## Deploy (free)
-
-The built app is **100% static** — no backend, no database, no env vars —
-so every free static host works. `npm run build` outputs to `dist/`.
-
-### Vercel (easiest)
-1. Push this folder to a GitHub repo.
-2. [vercel.com](https://vercel.com) → **New Project** → import the repo.
-   Vite is auto-detected (build `npm run build`, output `dist`) → Deploy.
-   Free Hobby tier, HTTPS + custom domain included.
-   *No repo?* Run `npx vercel` inside the folder instead.
-
-### Netlify
-- Drag the `dist/` folder onto [app.netlify.com/drop](https://app.netlify.com/drop),
-  or connect the repo (build `npm run build`, publish `dist`). Free tier.
-
-### GitHub Pages (one-push — workflow included)
-1. Create a repo with **this folder as the root**, so
-   `.github/workflows/deploy.yml` sits at the repo root.
-2. Repo → **Settings → Pages** → Source: **GitHub Actions**.
-3. `git push` — the workflow builds and deploys automatically to
-   `https://<user>.github.io/<repo>/`.
-   `base: './'` in `vite.config.ts` makes asset paths relative, so the
-   project sub-path works out of the box.
+Production build:
 
 ```bash
-cd rich-editor-web
-git init && git add -A && git commit -m "Rich Editor"
-git branch -M main
-git remote add origin https://github.com/<you>/rich-editor.git
-git push -u origin main
+npm run build
+npm run preview
 ```
 
-### Cloudflare Pages / Surge
-- **Cloudflare Pages**: connect the repo (build `npm run build`, output
-  `dist`) — free tier with unmetered bandwidth.
-- **Surge**: `npm run build && npx surge dist` — one command, free subdomain.
+Type checking:
 
-### Runtime notes
-- Inserted media uses local object URLs — files live in the browser session
-  only; nothing is uploaded anywhere (there is no server).
-- The app is a single page with no router, so no redirect rules are needed
-  on any host.
+```bash
+npm run typecheck
+```
 
-## Feature parity map
+A zero-build demo is also available as `rich-editor-demo.html`.
 
-| Android | Web |
-|---|---|
-| `RichEditorListView` row model + nesting (quoteIds, list runs, details stack) | ProseMirror schema — nodes mirror the `PageBlock` taxonomy |
-| `RichTextStyle` 9 flags + 4 entities | marks: bold/italic/underline/strike/mono/spoiler/sub/sup/mark + link, `math_inline`, `time_inline`, `anchor` |
-| Formatting panel (420 ms slide, scale .8→1) | iOS formatting strip with spring pop + selection-safe buttons |
-| Text-type & list menus, indent/outdent | `Aa` and list sheets (+ Tab / Shift+Tab) |
-| `TableModel` (spans, align/valign, header, bordered/striped, merge/unmerge, row/col ops) | `tableCommands.ts` — occupancy-grid port with identical semantics |
-| `RichMediaCell` single / collage / slideshow, per-item spoiler, captions | `media_figure` / `media_group` node views (mode toggle from 2 items; caption typing never restarts media) |
-| `RichMapCell` (zoom 15 default) | `map_block` + location sheet with geolocation |
-| `RichMathCell` / `MathSpan` (JLatexMath live preview) | KaTeX live-preview sheet, block + inline |
-| `RichDetailsCell` animated toggle | `details` node view with arrow toggle (editable summary) |
-| 21 slash commands (`RichCommand`) + 5-row suggestion popup | `SlashMenu` — same 21 commands and aliases |
-| Markdown line-start shortcuts (`#…######`, `- * +`, `[]`, `1.`, `|`, `---`, ` ``` `, `>`) | ProseMirror input rules |
-| `RichEditorHistory` (800 ms debounce, 150 steps, focus restore) | `prosemirror-history` tuned to `newGroupDelay: 800, depth: 150` |
-| Send / schedule / silent | **removed** → Generate → Preview → Download |
-| Upload pipeline (`RichMediaUploader`) | File picker → object URLs, same empty→done states |
-| — (new in web) | **Import .html** — top-bar ↑ opens any exported file back into the editor (full round-trip) |
-| AI compose sheet | omitted (requires the Telegram backend) |
+## iOS-style UI
 
-## Keyboard
+The interface follows Telegram iOS styling with:
 
-`Ctrl+B/I/U` bold/italic/underline · `Ctrl+Shift+X` strike · `Ctrl+E` mono ·
-`Ctrl+Shift+S` spoiler · `Ctrl+Shift+H` highlight · `Ctrl+K` link ·
-`Ctrl+Alt+1…6` headings · `Ctrl+Shift+7/8` numbered/bulleted ·
-`Tab`/`Shift+Tab` next cell / indent · `Ctrl+Z/Y` undo/redo (800 ms coalescing)
+- Translucent navigation bar
+- Back chevron
+- Live character counter
+- Undo / redo controls
+- Bottom compose bar
+- Attachment, emoji, `Aa`, lists, table and math actions
+- Blue circular Generate button
+- Formatting strip with:
+  - Bold
+  - Italic
+  - Underline
+  - Strikethrough
+  - Spoiler
+  - Monospace
+  - Subscript
+  - Superscript
+  - Highlight
+  - Quote
+  - Link
+  - Date
+  - Inline math
+  - Clear formatting
+- Grabber sheets
+- Preview sheet
+- Spring-style animations
+
+## Android → Web feature parity
+
+| Telegram Android | React Web |
+| --- | --- |
+| `RichEditorListView` | ProseMirror schema |
+| `RichTextStyle` | ProseMirror marks |
+| Formatting panel | Formatting strip |
+| Text / list menus | `Aa` / list sheets |
+| `TableModel` | `tableCommands` |
+| `RichMediaCell` | `media_figure` / `media_group` |
+| `RichMapCell` | `map_block` |
+| `RichMathCell` / `MathSpan` | KaTeX |
+| `RichDetailsCell` | `details` |
+| Slash commands | `SlashMenu` |
+| Markdown shortcuts | Input rules |
+| `RichEditorHistory` | `prosemirror-history` |
+| Send / schedule / silent | Generate / Preview / Download |
+| Upload pipeline | File picker / object URLs |
+| AI compose | Omitted |
+
+## Keyboard shortcuts
+
+- `Ctrl+B` — Bold
+- `Ctrl+I` — Italic
+- `Ctrl+U` — Underline
+- `Ctrl+Shift+X` — Strikethrough
+- `Ctrl+E` — Monospace
+- `Ctrl+Shift+S` — Spoiler
+- `Ctrl+Shift+H` — Highlight
+- `Ctrl+K` — Link
+- `Ctrl+Alt+1…6` — Headings
+- `Ctrl+Shift+7` — Ordered list
+- `Ctrl+Shift+8` — Bullet list
+- `Tab` / `Shift+Tab` — List indentation
+- `Ctrl+Z` — Undo
+- `Ctrl+Y` — Redo
+
+History uses a `newGroupDelay` of `800ms` and a depth of `150`.
 
 ## Architecture
 
+Core editor files:
+
+- `src/editor/schema.ts`
+- `src/editor/serializer.ts`
+- `src/editor/importHtml.ts`
+- `src/editor/commands.ts`
+- `src/editor/tableCommands.ts`
+- `src/editor/plugins.ts`
+- `src/editor/nodeviews.ts`
+- `src/editor/createEditor.ts`
+- `src/editor/exportHtml.ts`
+- `src/editor/bus.ts`
+
+React UI components:
+
+- `ivIcons.tsx`
+- `icons.tsx`
+- TopBar
+- BottomPanel
+- FormattingPanel
+- Menus
+- Dialogs
+- PreviewSheet
+- ErrorBoundary
+
+Hooks and utilities:
+
+- `hooks/useEditorBridge.ts`
+- `lib/util.ts`
+
+React owns the application chrome, while ProseMirror owns the document, selection and IME behavior.
+
+`ErrorBoundary` renders a diagnostic card when an unexpected runtime error occurs.
+
+## Deployment
+
+The project is static and can be deployed to:
+
+- Vercel
+- Netlify
+- GitHub Pages
+- Cloudflare Pages
+- Surge
+
+There is no backend, database or environment configuration required.
+
+Media uses local object URLs.
+
+## Verification
+
+The static audit verifies that:
+
+- Imports resolve
+- Named imports are exported
+- The serializer only emits allowed tags
+- No `data-*` editor attributes are exported
+- Classes are limited to supported `language-*` values
+
+Runtime verification requires Node.js.
+
+---
+
+# نسخه فارسی
+
+## Telegram Android Rich Editor → React Web
+
+این پروژه یک بازسازی کامل و Production-grade از Rich Editor اندروید تلگرام یعنی `org.telegram.ui.iv` در React است که ظاهر و تجربه کاربری آن بر اساس Telegram iOS طراحی شده است.
+
+## قابلیت اصلی
+
+ویرایشگر این workflow کامل را پشتیبانی می‌کند:
+
+1. Import کردن فایل `.html`
+2. ویرایش محتوا داخل ویرایشگر Rich بر پایه ProseMirror
+3. Generate کردن سند
+4. Preview نتیجه به صورت Rendered یا HTML Source
+5. دانلود فایل `.html` یا Copy کردن HTML
+
+### Import
+
+با دکمه `↑` در Title Bar می‌توان یک فایل `.html` وارد کرد.
+
+ساختارهای Semantic پشتیبانی‌شده حفظ می‌شوند، از جمله:
+
+- Headingها و Text Markها
+- لیست‌های Ordered و Unordered
+- Checkbox List
+- Quote و Code Block
+- Table
+- `details` / `summary`
+- `tg-spoiler`
+- `tg-emoji`
+- `tg-time`
+- `tg-math` / `tg-math-block`
+- `tg-map`
+- Gallery
+- Figure و Caption
+- Button
+
+HTMLهای Semantic ناشناخته به صورت امن به Blockهای ساده تبدیل می‌شوند.
+
+جایگزین کردن Document فعلی به عنوان یک مرحله Undo در History ثبت می‌شود.
+
+### Export
+
+HTML خروجی فقط از Tagهای مرجع و پشتیبانی‌شده استفاده می‌کند:
+
+- `tg-spoiler`
+- `tg-emoji`
+- `tg-time`
+- `tg-math` / `tg-math-block`
+- `tg-map`
+- `tg-collage`
+- `tg-slideshow`
+- `aside` / `cite`
+- `<table bordered striped>`
+- `<li>` برای Checkboxها
+- `details` / `summary`
+- Figure همراه با Caption
+
+Attributeهای داخلی Editor در خروجی HTML قرار نمی‌گیرند.
+
+## اجرای پروژه
+
+ابتدا Dependencies را نصب کنید:
+
+```bash
+npm install
+npm run dev
 ```
-src/
-  editor/    schema.ts (PageBlock ⇄ node taxonomy) · serializer.ts (doc → reference HTML)
-             importHtml.ts (.html file → doc — the Download inverse) · commands.ts ·
-             tableCommands.ts (TableModel port) · plugins.ts (keymap,
-             markdown rules, slash detection, selection reporter) · nodeviews.ts (cells)
-             createEditor.ts · exportHtml.ts (standalone doc + download) · bus.ts
-  components/ ivIcons.tsx (the REAL Telegram iv_*/formatting_* drawables, auto-
-              converted from github.com/DrKLO/Telegram) · icons.tsx (SF-style chrome) ·
-              TopBar · BottomPanel · FormattingPanel · Menus
-              Dialogs · PreviewSheet · ErrorBoundary
-  hooks/useEditorBridge.ts   lib/util.ts (21-command table, emoji, tg-time formats)
+
+برای Production Build:
+
+```bash
+npm run build
+npm run preview
 ```
 
-React hosts the chrome; ProseMirror owns the document, selection and IME —
-the same separation as `RichEditor` (orchestration) vs. the list view (model).
-An `ErrorBoundary` renders an iOS-style diagnostic card on any runtime error
-instead of a blank page.
+برای Type Check:
 
-## Verified
+```bash
+npm run typecheck
+```
 
-Static audit (see the project notebook): all relative imports resolve, all
-named imports are exported, and the serializer emits **only** tags from the
-allowed reference — no `data-*` attributes, `class=` only for `language-*`.
-Runtime verification requires `npm install && npm run dev` on a machine with
-Node (the authoring sandbox is Python-only).
-test
+یک نسخه Zero-build نیز با نام `rich-editor-demo.html` وجود دارد.
+
+## رابط کاربری شبیه iOS
+
+رابط کاربری با الهام از Telegram iOS ساخته شده و شامل موارد زیر است:
+
+- Navigation Bar شفاف
+- Back Chevron
+- Character Counter زنده
+- Undo / Redo
+- Compose Bar پایین صفحه
+- Attachment، Emoji، `Aa`، List، Table و Math
+- دکمه آبی و دایره‌ای Generate
+- Formatting Strip شامل:
+  - Bold
+  - Italic
+  - Underline
+  - Strikethrough
+  - Spoiler
+  - Monospace
+  - Subscript
+  - Superscript
+  - Highlight
+  - Quote
+  - Link
+  - Date
+  - Inline Math
+  - Clear Formatting
+- Sheetهای دارای Grabber
+- Preview Sheet
+- انیمیشن‌های Spring-style
+
+## تطبیق Android با Web
+
+| Telegram Android | React Web |
+| --- | --- |
+| `RichEditorListView` | ProseMirror schema |
+| `RichTextStyle` | ProseMirror marks |
+| Formatting panel | Formatting strip |
+| Text / list menus | `Aa` / list sheets |
+| `TableModel` | `tableCommands` |
+| `RichMediaCell` | `media_figure` / `media_group` |
+| `RichMapCell` | `map_block` |
+| `RichMathCell` / `MathSpan` | KaTeX |
+| `RichDetailsCell` | `details` |
+| Slash commands | `SlashMenu` |
+| Markdown shortcuts | Input rules |
+| `RichEditorHistory` | `prosemirror-history` |
+| Send / schedule / silent | Generate / Preview / Download |
+| Upload pipeline | File picker / object URLs |
+| AI compose | حذف شده |
+
+## میانبرهای کیبورد
+
+- `Ctrl+B` — Bold
+- `Ctrl+I` — Italic
+- `Ctrl+U` — Underline
+- `Ctrl+Shift+X` — Strikethrough
+- `Ctrl+E` — Monospace
+- `Ctrl+Shift+S` — Spoiler
+- `Ctrl+Shift+H` — Highlight
+- `Ctrl+K` — Link
+- `Ctrl+Alt+1…6` — Headingها
+- `Ctrl+Shift+7` — Ordered List
+- `Ctrl+Shift+8` — Bullet List
+- `Tab` / `Shift+Tab` — Indent کردن List
+- `Ctrl+Z` — Undo
+- `Ctrl+Y` — Redo
+
+History با `newGroupDelay` برابر `800ms` و Depth برابر `150` تنظیم شده است.
+
+## معماری پروژه
+
+فایل‌های اصلی Editor:
+
+- `src/editor/schema.ts`
+- `src/editor/serializer.ts`
+- `src/editor/importHtml.ts`
+- `src/editor/commands.ts`
+- `src/editor/tableCommands.ts`
+- `src/editor/plugins.ts`
+- `src/editor/nodeviews.ts`
+- `src/editor/createEditor.ts`
+- `src/editor/exportHtml.ts`
+- `src/editor/bus.ts`
+
+کامپوننت‌های React:
+
+- `ivIcons.tsx`
+- `icons.tsx`
+- TopBar
+- BottomPanel
+- FormattingPanel
+- Menus
+- Dialogs
+- PreviewSheet
+- ErrorBoundary
+
+Hookها و Utilityها:
+
+- `hooks/useEditorBridge.ts`
+- `lib/util.ts`
+
+React مسئول Chrome و رابط کاربری برنامه است، در حالی که ProseMirror مدیریت Document، Selection و رفتار IME را بر عهده دارد.
+
+`ErrorBoundary` در صورت رخ دادن خطای غیرمنتظره Runtime یک Diagnostic Card نمایش می‌دهد.
+
+## Deployment
+
+این پروژه کاملاً Static است و می‌توان آن را روی سرویس‌های زیر Deploy کرد:
+
+- Vercel
+- Netlify
+- GitHub Pages
+- Cloudflare Pages
+- Surge
+
+هیچ Backend، Database یا Environment Configuration لازم نیست.
+
+Media با Local Object URL مدیریت می‌شود.
+
+## بررسی و Verification
+
+Static Audit موارد زیر را بررسی می‌کند:
+
+- Importها Resolve می‌شوند
+- Named Importها Export شده‌اند
+- Serializer فقط Tagهای مجاز را تولید می‌کند
+- هیچ Attribute از نوع `data-*` در خروجی Editor وجود ندارد
+- Classها فقط به مقادیر پشتیبانی‌شده `language-*` محدود هستند
+
+برای Runtime Verification به Node.js نیاز است.
