@@ -425,3 +425,23 @@ Static Audit موارد زیر را بررسی می‌کند:
 - Classها فقط به مقادیر پشتیبانی‌شده `language-*` محدود هستند
 
 برای Runtime Verification به Node.js نیاز است.
+
+## Rich media support
+
+This editor follows the **rich media messaging convention** (see `01-Agents/shared/rich-media.md` in the gutes vault): tasteful emoticons, Markdown structure, links, images, files and artifacts — substance first, emojis decorate.
+
+Supported rich-media elements:
+
+- **Emojis** — curated `EMOJI_SET` + custom emoji (`tg-emoji emoji-id="…">😀</tg-emoji>`) via the emoji dialog
+- **Tables** — bordered/striped tables with captions, merged cells, alignment (`/table`)
+- **Formatting** — bold, italic, underline, strike, code, spoiler, sub/sup, mark, links
+- **Structure** — headings, quotes, pull quotes, code blocks, lists, task lists, details/toggle, dividers
+- **Media** — images, video, audio, documents, galleries (collage/slideshow), maps
+- **Buttons** — inline button rows (`tg-button`)
+- **Math** — inline and block math (`tg-math`, `tg-math-block`)
+- **Time** — formatted dates (`tg-time`)
+- **Spoilers** — `tg-spoiler`
+
+### Demo
+
+Open `rich-media-demo.html` for a sample document showcasing emojis, a table, formatting, a spoiler and a collapsible block. Import it with the `↑` button to edit.
